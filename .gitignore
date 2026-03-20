@@ -1,6 +1,8 @@
 # Data files (download locally, do not commit)
-data/raw/
-data/processed/
+data/raw/*
+data/processed/*
+!data/raw/.gitkeep
+!data/processed/.gitkeep
 
 # Python
 __pycache__/
