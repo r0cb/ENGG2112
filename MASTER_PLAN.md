@@ -81,14 +81,20 @@ A locally hosted website that:
 
 All datasets are free and publicly available. The **join key** across all ABS datasets is the **SA2 code** (a 9-digit ABS geographic identifier for Sydney suburbs).
 
-| Dataset | Source | URL / Access | Key columns |
-|---|---|---|---|
-| SA2 Demographics (age, income, density) | ABS 2021 Census — Community Profiles | abs.gov.au → Census → Community Profiles → SA2 | `sa2_code`, `median_age`, `pct_65_plus`, `median_household_income`, `pop_density` |
-| Commuter flows | ABS 2021 Census — Journey to Work | abs.gov.au → Census → Journey to Work | `origin_sa2`, `destination_sa2`, `commuter_count` |
-| Flu ILI rates | NSW Health — Influenza Surveillance Report | health.nsw.gov.au/Infectious/influenza | `region`, `season`, `ili_rate_pct` |
-| Vaccination coverage | NCIRS — Annual Flu Vaccination Coverage | ncirs.org.au/sites/default/files/... | `age_group`, `state`, `vax_coverage_pct` |
+| Dataset | Source | Direct URL | Format | Geographic level | Key columns |
+|---|---|---|---|---|---|
+| SA2 Demographics (age, income, density) | ABS 2021 Census — DataPacks | https://www.abs.gov.au/census/find-census-data/datapacks | ZIP → CSV | SA2 | `sa2_code`, `median_age`, `pct_65_plus`, `median_household_income`, `pop_density` |
+| Commuter flows | ABS 2021 Census — DataPacks (Working Population Profile) | https://www.abs.gov.au/census/find-census-data/datapacks | ZIP → CSV | SA2 / DZN | `origin_sa2`, `destination_sa2`, `commuter_count` |
+| Flu ILI rates | NNDSS Public Dataset (influenza) — 2008–2024 | https://www.cdc.gov.au/resources/publications/nndss-dataset-influenza | Excel (46 MB) | State → LHD | `region`, `season`, `ili_rate_pct` |
+| Vaccination coverage | NCIRS — Influenza Vaccination Coverage Data | https://ncirs.org.au/influenza-vaccination-coverage-data | Web table + PDF | State (NSW), by age group | `age_group`, `state`, `vax_coverage_pct` |
 
-**Download instructions:** Place all raw CSV/XLSX files into `data/raw/`. File paths are referenced with `# TODO` comments in the notebooks.
+**Download instructions:**
+1. **ABS DataPacks** → Select "2021" → "General Community Profile" → geography "SA2" → filter to NSW → download ZIP → extract CSVs into `data/raw/abs_sa2_demographics/`
+2. **ABS Journey to Work** → Same DataPacks portal → select "Working Population Profile" → SA2 level → NSW → extract into `data/raw/abs_journey_to_work/`
+3. **NNDSS influenza Excel** → Download from the URL above (free, no login) → save to `data/raw/nndss_influenza.xlsx`
+4. **NCIRS vaccination** → Visit URL above → copy table data for NSW by age group into `data/raw/ncirs_vaccination_coverage.csv`
+
+**Note on ILI geographic granularity:** The NNDSS data is at state level; NSW Health reports are by Local Health District (LHD). You will need to map LHD → SA2 using the ABS correspondence tables (available at abs.gov.au → Statistical Geography). This mapping is done in `notebooks/01_data_exploration.ipynb` Section 2.
 
 ---
 
@@ -224,7 +230,69 @@ Report output for each: peak infection %, days to peak, total infected proportio
 
 ---
 
-## 9. Glossary
+## 9. Team Git Workflow
+
+### The weekly cycle
+```
+Start of week                              End of week (team meeting)
+     │                                            │
+     ▼                                            ▼
+git pull origin main          ─────────►  open PR → team reviews → merge to main
+     │                                            ▲
+     ▼                                            │
+git checkout -b yourname/week-N-feature           │
+     │                                            │
+     │  (do your work)                            │
+     ▼                                            │
+git push origin yourname/week-N-feature  ─────────┘
+```
+
+### Week-by-week commands
+
+**Start of every week — pull latest main and create your branch:**
+```bash
+git checkout main
+git pull origin main
+git checkout -b yourname/week-N-what-you-are-doing
+# e.g. git checkout -b roc/week1-repo-setup
+# e.g. git checkout -b alice/week2-abs-demographics
+```
+
+**While working — commit often:**
+```bash
+git add notebooks/01_data_exploration.ipynb   # add specific files, not git add .
+git commit -m "short description of what you did"
+git push origin yourname/week-N-what-you-are-doing
+```
+
+**End of week — open a Pull Request for the team to review at the meeting:**
+```bash
+gh pr create --title "Week N: [your name] — what you did" --body "Summary of changes"
+# Or open it on github.com/r0cb/ENGG2112/pulls
+```
+
+**At the meeting — team reviews, discusses, then merges the PRs you agree on:**
+```bash
+# After approval on GitHub:
+gh pr merge <PR-number> --merge
+```
+
+### Branch naming convention
+`yourname/week-N-short-description`
+- `roc/week1-repo-setup`
+- `alice/week2-abs-demographics`
+- `ben/week3-logistic-regression`
+- `sarah/week4-sir-model`
+
+### Rules
+- **Never commit directly to `main`** — always work on a branch
+- **Never commit files in `data/`** — they are gitignored; share data via Google Drive or a shared folder
+- **One notebook edit per branch** — avoids merge conflicts in `.ipynb` files
+- If you get a merge conflict, ask the software student (Roc) to resolve it
+
+---
+
+## 10. Glossary
 
 | Term | Definition |
 |---|---|
