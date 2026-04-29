@@ -1,8 +1,15 @@
-# Data files (download locally, do not commit)
+# Raw data (regenerable from APIs by Notebook 00 — do not commit)
 data/raw/*
-data/processed/*
 !data/raw/.gitkeep
+
+# Processed data — commit small canonical CSVs (master_counties, master_panel) but ignore the rest
+data/processed/*
 !data/processed/.gitkeep
+!data/processed/master_counties.csv
+!data/processed/master_panel.csv
+
+# Archived data and notebooks (kept locally, not committed)
+_archive/
 
 # Python
 __pycache__/
