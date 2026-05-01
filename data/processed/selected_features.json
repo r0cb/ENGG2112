@@ -1,0 +1,160 @@
+{
+  "demographic": [
+    "pop_density_per_sqmi",
+    "pct_elderly",
+    "avg_household_size",
+    "median_income",
+    "public_transport_pct",
+    "pct_bachelors_plus",
+    "pct_non_white",
+    "pct_foreign_born"
+  ],
+  "state": [
+    "state_DE",
+    "state_NY",
+    "state_PA"
+  ],
+  "all": [
+    "pop_density_per_sqmi",
+    "pct_elderly",
+    "avg_household_size",
+    "median_income",
+    "public_transport_pct",
+    "pct_bachelors_plus",
+    "pct_non_white",
+    "pct_foreign_born",
+    "state_DE",
+    "state_NY",
+    "state_PA"
+  ],
+  "metadata": {
+    "method": "Multi-method consensus (top 6 in \u2265 3/5 ranking methods) + domain override",
+    "n_obs": 141,
+    "n_features_final": 11,
+    "obs_to_features_ratio": 12.82,
+    "notebook_source": "03_feature_selection.ipynb"
+  },
+  "rankings": [
+    {
+      "feature": "avg_household_size",
+      "pearson": 1,
+      "spearman": 1,
+      "mutual_info": 1,
+      "lasso": 7,
+      "rf_perm": 1,
+      "rfecv": 1,
+      "borda": 60,
+      "top6_count": 4
+    },
+    {
+      "feature": "pct_foreign_born",
+      "pearson": 2,
+      "spearman": 2,
+      "mutual_info": 5,
+      "lasso": 2,
+      "rf_perm": 4,
+      "rfecv": 1,
+      "borda": 56,
+      "top6_count": 5
+    },
+    {
+      "feature": "pct_non_white",
+      "pearson": 3,
+      "spearman": 3,
+      "mutual_info": 2,
+      "lasso": 8,
+      "rf_perm": 7,
+      "rfecv": 1,
+      "borda": 48,
+      "top6_count": 3
+    },
+    {
+      "feature": "public_transport_pct",
+      "pearson": 5,
+      "spearman": 6,
+      "mutual_info": 8,
+      "lasso": 3,
+      "rf_perm": 6,
+      "rfecv": 2,
+      "borda": 42,
+      "top6_count": 4
+    },
+    {
+      "feature": "median_income",
+      "pearson": 4,
+      "spearman": 8,
+      "mutual_info": 10,
+      "lasso": 6,
+      "rf_perm": 3,
+      "rfecv": 1,
+      "borda": 40,
+      "top6_count": 3
+    },
+    {
+      "feature": "pop_density_per_sqmi",
+      "pearson": 10,
+      "spearman": 5,
+      "mutual_info": 3,
+      "lasso": 1,
+      "rf_perm": 8,
+      "rfecv": 6,
+      "borda": 39,
+      "top6_count": 3
+    },
+    {
+      "feature": "pct_bachelors_plus",
+      "pearson": 11,
+      "spearman": 11,
+      "mutual_info": 4,
+      "lasso": 4,
+      "rf_perm": 2,
+      "rfecv": 3,
+      "borda": 37,
+      "top6_count": 3
+    },
+    {
+      "feature": "pct_elderly",
+      "pearson": 6,
+      "spearman": 4,
+      "mutual_info": 10,
+      "lasso": 11,
+      "rf_perm": 5,
+      "rfecv": 1,
+      "borda": 35,
+      "top6_count": 3
+    },
+    {
+      "feature": "unemployment_rate",
+      "pearson": 7,
+      "spearman": 7,
+      "mutual_info": 7,
+      "lasso": 10,
+      "rf_perm": 9,
+      "rfecv": 1,
+      "borda": 31,
+      "top6_count": 0
+    },
+    {
+      "feature": "poverty_rate",
+      "pearson": 9,
+      "spearman": 9,
+      "mutual_info": 10,
+      "lasso": 5,
+      "rf_perm": 10,
+      "rfecv": 4,
+      "borda": 25,
+      "top6_count": 1
+    },
+    {
+      "feature": "median_age",
+      "pearson": 8,
+      "spearman": 10,
+      "mutual_info": 5,
+      "lasso": 9,
+      "rf_perm": 11,
+      "rfecv": 5,
+      "borda": 24,
+      "top6_count": 1
+    }
+  ]
+}

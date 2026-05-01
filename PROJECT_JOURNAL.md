@@ -252,22 +252,151 @@ Comprehensive citations for all data sources, methodology references (LASSO, RF,
 
 ---
 
-## Session 9 — Exploratory Data Analysis (Current)
+## Session 9 — Exploratory Data Analysis
 
-**Date**: May 1, 2026 →
+**Date**: May 1, 2026
 **Goal**: Explore distributions, validate the outbreak label, identify multicollinearity, generate insights for feature selection.
 
-### Notebook 02 covers
-1. Univariate distributions of features and outcomes
-2. Outbreak label validation (does it look sensible per state?)
-3. Bivariate analysis: features vs flu rate, features vs outbreak label
-4. Correlation matrix + multicollinearity check
-5. Geographic patterns
-6. Outlier identification
-7. State-level differences
+### What we built
+Notebook 02 — Exploratory Data Analysis. Report-style with 12 sections covering univariate distributions, outcome analysis, outbreak label validation, feature-outcome relationships, correlation matrix, outliers, state-level patterns, panel sensitivity, and a deep-dive section addressing counterintuitive findings.
 
-### Findings
-*(To be filled in once Notebook 02 runs)*
+### Key findings
+
+#### Multicollinearity is severe — features fall into 3 clusters
+9 feature pairs have |ρ| > 0.7. The 11 candidate features cluster into:
+
+| Cluster | Features | What they measure |
+|---|---|---|
+| **Urban diversity** | `pop_density_per_sqmi`, `pct_non_white`, `pct_foreign_born`, `public_transport_pct` | Urban-ness (pairwise ρ = 0.72–0.90) |
+| **Socioeconomic** | `median_income`, `pct_bachelors_plus` | Economic / educational status (ρ = 0.79) |
+| **Age** | `median_age`, `pct_elderly` | Same construct (ρ = 0.89) |
+
+Each cluster should reduce to 1–2 representative features. The 11-feature model can defensibly become a ~5–6-feature model. This is a *good* result — clear targets for Notebook 03 feature selection.
+
+#### Counterintuitive findings — resolved via per-state analysis
+
+**1. `pct_elderly` correlates negatively with flu rate (ρ = −0.29)**
+
+Investigated by computing per-state Spearman correlations:
+- NY: ρ = −0.37
+- PA: ρ = −0.08
+- CT: ρ = −0.48
+- DE: +0.50 (n=3, not interpretable)
+
+Within-state confirms the negative direction. **Resolution**: `pct_elderly` is acting as a **rural-ness proxy**. Rural counties have older populations (younger people leave for cities) and lower per-capita reported flu rates (less testing access). The correlation isn't "elderly are less vulnerable to flu" — it's "rural areas have more elderly AND get less flu reporting".
+
+**Mitigation**: Keep both `pct_elderly` and `pop_density_per_sqmi` in the model so it can disentangle "elderly" from "rural" via the multivariate fit.
+
+**2. `median_income` correlates positively with flu rate (ρ = +0.19)**
+
+This surfaced a clean **Simpson's paradox**:
+- Pooled: ρ = +0.19
+- Within-state mean: ρ = −0.03
+
+DE and NY have moderate-to-high median incomes AND high flu rates (because of surveillance practice differences, not income). PA has lower incomes AND lower flu rates. The pooled correlation captures this state-level pattern, not a real income effect.
+
+**Mitigation**: Include `state` (or `state_fips`) as a categorical feature so the model absorbs state-level baselines and frees demographic features to capture residual variation.
+
+#### Data quality finding — NY 2014-2015 reporting outage
+
+Discovered while inspecting the panel: only **40 of 62 NY counties** have data for the 2014-2015 season. The 22 missing counties are all upstate (Albany, Allegany, Broome, Cattaraugus, Cayuga, Chautauqua, Chemung, Chenango, Clinton, Columbia, Cortland, Delaware, Dutchess, Erie, Essex, Franklin, Fulton, Genesee, Greene, Hamilton, Herkimer, Jefferson). They have data for 2013-14 and 2015-16 — only 2014-15 is missing.
+
+This appears to be a one-off NY State surveillance reporting outage affecting upstate transmission. The downstate (NYC area) counties have complete records.
+
+**Mitigation**:
+- Cross-section unaffected (we use 2024-25 for NY, not 2014-15)
+- For panel sensitivity (Notebook 03+), drop 2014-15 entirely — loses ~40 rows, simpler than carrying an imbalanced year
+- Documented in `MASTER_PLAN.md` § 10 (Limitations & Caveats)
+
+#### Post-COVID flu rate explosion (panel observation)
+
+NY mean flu rate by season:
+- 2009-10 → 2018-19: 100–800 cases per 100K (typical pre-pandemic)
+- 2020-21: 38 (COVID NPIs killed flu transmission)
+- 2022-23 onwards: 1,500–2,250+ (3-10× pre-COVID levels)
+
+Combination of post-pandemic immunity debt + dramatically expanded testing infrastructure. **Critical implication**: Panel models cannot pool seasons naively — they must include `season_start_year` to absorb the temporal baseline shift. Otherwise a model would learn "demographics in 2024 = high outbreak rate" when really "2024 has a much higher baseline regardless of demographics".
+
+#### Outliers retained (all structural)
+
+NYC boroughs (Manhattan, Bronx, Kings/Brooklyn, Queens), Philadelphia, NYC commuter belts (Westchester, Nassau, Suffolk, Putnam) appear as outliers on density / public transport / income / foreign-born / flu rate. None are data errors. Robust scaling for linear models + tree-based models will handle them gracefully.
+
+### Decision
+
+**Predicted final feature set for Notebook 03** (5–6 features after consensus selection):
+- `pop_density_per_sqmi` (urban-ness, cluster A representative)
+- `pct_elderly` (age + rural proxy — must stay paired with density)
+- `median_income` (SES, cluster B representative)
+- `unemployment_rate` (socioeconomic stress, doesn't cluster strongly)
+- `avg_household_size` (transmission setting, doesn't cluster strongly)
+- `state` (categorical — absorbs state-level surveillance baselines)
+
+Notebook 03 will validate this prediction empirically using LASSO + RF permutation + RFECV + VIF + mutual information consensus.
+
+---
+
+## Session 10 — Feature Selection (Multi-Method Consensus)
+
+**Date**: May 1, 2026
+**Goal**: Apply academically rigorous feature selection to identify which of 11 candidate demographic features should enter the ML models.
+
+### What we built
+Notebook 03 — Feature Selection. Six selection methods: Pearson + Spearman correlation, mutual information, VIF pruning, LASSO with cross-validated regularisation, Random Forest permutation importance, and Recursive Feature Elimination with CV.
+
+### Methodology
+- Each ranking method assigns each feature a rank
+- A feature is "selected" if it ranks in the **top 6 of ≥ 3 of 5 ranking methods** (VIF used only for diagnostic, not ranking)
+- `state` (categorical, 3 dummies) is locked in by domain override (Simpson's paradox finding from EDA)
+
+### Results — 8 demographic features selected (+ 3 state dummies = 11 total)
+
+| Feature | Borda score | In top 6 of N methods | Selected |
+|---|---|---|---|
+| `avg_household_size` | 60 | 4/5 | ✅ |
+| `pct_foreign_born` | 56 | 5/5 | ✅ |
+| `pct_non_white` | 48 | 3/5 | ✅ |
+| `public_transport_pct` | 42 | 4/5 | ✅ |
+| `median_income` | 40 | 3/5 | ✅ |
+| `pop_density_per_sqmi` | 39 | 3/5 | ✅ |
+| `pct_bachelors_plus` | 37 | 3/5 | ✅ |
+| `pct_elderly` | 35 | 3/5 | ✅ |
+| `unemployment_rate` | 31 | 0/5 | ❌ |
+| `poverty_rate` | 25 | 1/5 | ❌ |
+| `median_age` | 24 | 1/5 | ❌ |
+
+### Surprises and tensions
+
+**1. Final feature count (8) is higher than predicted (5–6)**
+
+EDA predicted aggressive cluster reduction (e.g. drop 3 of the 4 urban-diversity features). Consensus selection was less aggressive — it kept 4 of the 4 urban-diversity features (`pop_density`, `pct_non_white`, `pct_foreign_born`, `public_transport_pct`).
+
+This is because the multivariate methods (LASSO, RF, RFECV) found *each* of these correlated features carries some unique signal once the others are controlled for. The features look redundant under bivariate analysis (Spearman ρ = 0.7-0.9) but a multivariate fit can still extract independent contribution from each.
+
+**Implication**: Linear models (logistic regression in Notebook 04) may exhibit coefficient instability or sign flips because of the multicollinearity. Tree-based models (Notebooks 05-06) handle correlated features more gracefully.
+
+**Mitigation**: All downstream notebooks must use regularisation (L1 or L2) for linear models. Report standardised coefficients with confidence intervals from bootstrapping.
+
+**2. VIF said "drop these two" but consensus disagreed**
+
+VIF pruning identified `pct_foreign_born` (VIF=16.2) and `pct_elderly` (VIF=14.6) as multicollinearity-flagged. But both ended up in the consensus selection (pct_foreign_born ranked top in 5/5 methods; pct_elderly in 3/5).
+
+This tension is real and unresolved. The pragmatic answer: consensus wins for selection, but we report the VIF concern as a methodology caveat. If linear models show coefficient instability in Notebook 04, we'll revisit.
+
+**3. `unemployment_rate` was eliminated despite RFECV picking it**
+
+Five of six methods ranked unemployment_rate at 7-10 (out of 11). Only RFECV picked it (rank 1, "selected"). RFECV finds interaction effects that bivariate methods miss — but the consensus rule treats this as outvoted.
+
+**Decision**: Trust consensus over a single method. Note this in the report as a methodological choice rather than an oversight.
+
+### Final feature set (saved to `data/processed/selected_features.json`)
+```
+demographic: pop_density_per_sqmi, pct_elderly, avg_household_size,
+             median_income, public_transport_pct, pct_bachelors_plus,
+             pct_non_white, pct_foreign_born
+state:       state_DE, state_NY, state_PA  (DE-baseline reference)
+```
+
+11 features × 141 observations = **12.8:1 obs-to-features ratio**. Above the 10:1 rule of thumb for logistic regression, so the model is well-powered with the chosen feature set.
 
 ---
 

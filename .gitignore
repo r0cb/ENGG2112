@@ -2,11 +2,13 @@
 data/raw/*
 !data/raw/.gitkeep
 
-# Processed data — commit small canonical CSVs (master_counties, master_panel) but ignore the rest
+# Processed data — commit small canonical CSVs (master_counties, master_panel)
+# and selected_features.json (consumed by downstream notebooks); ignore the rest
 data/processed/*
 !data/processed/.gitkeep
 !data/processed/master_counties.csv
 !data/processed/master_panel.csv
+!data/processed/selected_features.json
 
 # Archived data and notebooks (kept locally, not committed)
 _archive/
