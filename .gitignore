@@ -13,6 +13,10 @@ data/processed/*
 # Archived data and notebooks (kept locally, not committed)
 _archive/
 
+# Model artifacts: track JSON metrics for transparency, ignore .pkl binaries
+# (notebooks regenerate the .pkl when run)
+models/*.pkl
+
 # Python
 __pycache__/
 *.pyc

@@ -400,6 +400,77 @@ state:       state_DE, state_NY, state_PA  (DE-baseline reference)
 
 ---
 
+## Session 11 — Logistic Regression Baseline
+
+**Date**: May 1, 2026
+**Goal**: Train the first ML model — logistic regression — using the 11 features locked in by Notebook 03. Establish baseline performance for the model comparison study.
+
+### What we built
+Notebook 04 — Logistic Regression. Cross-validated training with `LogisticRegressionCV` (chooses `C` automatically), out-of-fold predictions for honest metrics, bootstrap coefficient confidence intervals (1000 resamples), per-state performance breakdown, and saved model artifact.
+
+### Configuration
+- L2 regularisation (Notebook 03 already explored L1/LASSO during selection)
+- `class_weight='balanced'` (26.2% positive class)
+- 5-fold stratified cross-validation
+- `scoring='average_precision'` (PR-AUC) for hyperparameter selection
+- Selected `C = 0.0886` (relatively strong regularisation)
+
+### Performance (out-of-fold cross-validation)
+
+| Metric | Value | Baseline | Note |
+|---|---|---|---|
+| **PR-AUC** | 0.500 | 0.262 (positive rate) | Headline metric — ~2× random |
+| ROC-AUC | 0.641 | 0.500 | Modest discrimination |
+| Accuracy | 0.631 | 0.738 (always-zero) | Below trivial baseline by design |
+| F1 | 0.366 | — | Reflects precision-recall trade-off |
+| Brier score | 0.221 | 0.25 (random) | Modestly calibrated |
+
+The accuracy being **below** the always-predict-zero baseline (0.631 vs 0.738) is the expected consequence of `class_weight='balanced'` — we trade accuracy for the ability to identify minority-class outbreaks. Without balancing, the model would default to predicting all zeros and miss every outbreak.
+
+### Coefficient stability — multicollinearity confirmed
+
+Bootstrap analysis (1000 resamples) revealed that **only 3 of 11 coefficients have CIs that don't cross zero**:
+
+| Feature | Coef | 95% CI | Stable? |
+|---|---|---|---|
+| `avg_household_size` | +0.42 | [+0.20, +0.68] | ✅ |
+| `pct_bachelors_plus` | -0.30 | [-0.52, -0.04] | ✅ |
+| `pct_foreign_born` | +0.28 | [+0.12, +0.45] | ✅ |
+| `pop_density_per_sqmi` | -0.15 | [-0.29, +0.07] | ❌ Crosses zero |
+| `pct_elderly` | -0.06 | [-0.36, +0.25] | ❌ |
+| `median_income` | +0.09 | [-0.15, +0.31] | ❌ |
+| `public_transport_pct` | +0.05 | [-0.14, +0.24] | ❌ |
+| `pct_non_white` | +0.10 | [-0.14, +0.32] | ❌ |
+| State dummies (DE/NY/PA) | small | all cross zero | ❌ |
+
+This **directly confirms the multicollinearity tension flagged in Notebook 03**: 8 of the 11 selected features have unstable coefficient signs in this linear model. The features carry signal collectively but logistic regression cannot reliably partition that signal among them.
+
+### Implications
+
+**Honest reading of the result**: Logistic regression establishes a working baseline (PR-AUC = 0.500, almost double random) but:
+1. The model is *barely* able to identify outbreak counties at the standard 0.5 decision threshold
+2. Most coefficients are statistically unstable — we cannot draw causal claims from them
+
+**Why this is the expected outcome**:
+- 141 observations is small for 11 partially-correlated features
+- Within-state outbreak labelling means we're predicting *relative* rank, not absolute incidence
+- Cross-state surveillance differences absorb a lot of variance via the state dummies, leaving demographic features less to explain
+
+**Why we expect tree-based models to do better**:
+- Random Forest and XGBoost handle correlated features by using them as substitutes (no instability)
+- Tree models capture non-linear interactions (e.g. "high density × high pct_elderly" → not just additive)
+- Ensemble methods are more robust to small samples
+
+### Decision
+
+This is our baseline. Move to Notebooks 05–07 (Random Forest, Gradient Boosting, KNN) for the head-to-head comparison. **Do not over-interpret logistic regression coefficients in the report** — note the multicollinearity caveat and rely on the comparison-notebook results for production model selection.
+
+### Code folding rolled out
+
+Added `jupyter.source_hidden: true` and `hide_input: true` metadata flags to all 73 code cells across 5 notebooks. Notebooks now open in report-style view (markdown + outputs visible, code folded) — users can click to expand any cell.
+
+---
+
 ## Upcoming Work
 
 ### Session 10 — Feature Selection (Notebook 03)
