@@ -584,6 +584,77 @@ Realistic expectation: PR-AUC could reach 0.55-0.65 with tree-based models. The 
 
 ---
 
+## Session 13 — Random Forest
+
+**Date**: May 1, 2026
+**Goal**: Test the hypothesis that tree-based ensembles outperform logistic regression on this multicollinear dataset.
+
+### What we built
+Notebook 05 — Random Forest with hyperparameter tuning, post-hoc isotonic calibration, and side-by-side comparison with logistic regression. Same dataset (`master_stacked.csv`, 357 rows), same features (5 demographic + 2 disease + 3 state = 10), same CV strategy (`StratifiedGroupKFold`).
+
+### Hyperparameter tuning
+GridSearchCV over 24 configurations (n_estimators × max_depth × min_samples_split × max_features). Best:
+- `n_estimators`: 500
+- `max_depth`: None (grow until pure)
+- `min_samples_split`: 5
+- `max_features`: 'sqrt'
+
+### Headline results — RF vs LR
+
+| Metric | LR | RF | Δ |
+|---|---|---|---|
+| **PR-AUC** | 0.446 | **0.506** | **+0.060** |
+| ROC-AUC | 0.610 | 0.652 | +0.043 |
+| Accuracy | 0.669 | 0.782 | +0.112 |
+| Precision | 0.368 | 0.714 | **+0.346** |
+| Recall | 0.376 | 0.269 | -0.108 |
+| F1 | 0.372 | 0.391 | +0.018 |
+| Brier | 0.231 | 0.177 | -0.054 (better) |
+
+**Random Forest improved PR-AUC by 13.4% relative** (0.446 → 0.506). It traded some recall for substantially better precision (0.37 → 0.71) — when RF says "outbreak", it's right 71% of the time vs 37% for logistic. This is appropriate for the SIR simulation since we care about ranking quality (which PR-AUC measures), not binary classification at 0.5 threshold.
+
+### Calibration
+Brier score improved from logistic (0.231) to uncalibrated RF (0.177) to isotonic-calibrated RF (0.162). The calibrated probabilities are now suitable for direct use as transmission rate modifiers in the SIR simulation.
+
+### Per-disease performance
+
+| Disease | n | LR PR-AUC | RF PR-AUC | Δ |
+|---|---|---|---|---|
+| COVID | 140 | 0.554 | **0.653** | **+0.099** |
+| FLU | 141 | 0.479 | 0.470 | -0.009 |
+| RSV | 76 | 0.228 | 0.287 | +0.059 |
+
+The RF gain is **concentrated in COVID** (+0.099 PR-AUC). Flu performance is flat — interesting finding, suggesting flu's predictable signal is genuinely linear in demographics. RSV improved modestly despite the small sample.
+
+### Feature importance (permutation, top 7)
+
+| Feature | Importance |
+|---|---|
+| `pct_foreign_born` | 0.080 |
+| `avg_household_size` | 0.079 |
+| `public_transport_pct` | 0.069 |
+| `disease_FLU` (vs reference) | 0.065 |
+| `pop_density_per_sqmi` | 0.061 |
+| `pct_elderly` | 0.056 |
+| `disease_RSV` (vs reference) | 0.041 |
+
+**The top three features match the stable LR coefficients exactly**: `pct_foreign_born`, `avg_household_size`, `public_transport_pct`. These really are robust "high-contact urban" predictors that survive across two very different model types.
+
+The `disease_FLU` dummy ranking 4th is interesting — RF learned that flu behaves differently from COVID/RSV in ways the model can exploit. Logistic regression's disease dummies were unstable; RF makes them useful.
+
+### What this means
+
+1. **RF resolved most of the multicollinearity issue**: 7 of 10 features have positive permutation importance (vs only 3 stable coefficients in LR)
+2. **Top-3 feature signal is real**: Both linear and non-linear methods identify the same urban-density features as the strongest predictors
+3. **Tree-based modelling captures interactions**: disease × demographic interactions add genuine signal that LR couldn't access
+4. **Probabilities are now SIR-ready**: Calibrated Brier = 0.162
+
+### Decision
+
+Random Forest is a strong candidate for the production model. We continue to Notebook 06 (XGBoost) which typically outperforms RF on tabular data. Final selection happens in Notebook 08 (comparison).
+
+---
+
 ## Upcoming Work
 
 ### Session 10 — Feature Selection (Notebook 03)
