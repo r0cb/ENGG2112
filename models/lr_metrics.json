@@ -1,139 +1,152 @@
 {
   "model": "LogisticRegression",
-  "best_C": 0.08858667904100823,
+  "dataset": "master_stacked.csv",
+  "n_observations": 357,
+  "n_features": 10,
+  "positive_class_rate": 0.2605042016806723,
+  "cv_strategy": "StratifiedGroupKFold(n_splits=5, groups=fips)",
+  "best_C": 0.01,
   "penalty": "l2",
   "class_weight": "balanced",
   "cv_metrics": {
-    "accuracy": 0.6312056737588653,
-    "precision": 0.3333333333333333,
-    "recall": 0.40540540540540543,
-    "f1": 0.36585365853658536,
-    "roc_auc": 0.6411122661122661,
-    "pr_auc": 0.4995061899364922,
-    "brier": 0.2209433217172589
+    "accuracy": 0.6694677871148459,
+    "precision": 0.3684210526315789,
+    "recall": 0.3763440860215054,
+    "f1": 0.3723404255319149,
+    "roc_auc": 0.6097262952101662,
+    "pr_auc": 0.4459482329303308,
+    "brier": 0.23085206553041665
   },
-  "baseline_pr_auc": 0.2624113475177305,
+  "baseline_pr_auc": 0.2605042016806723,
   "coefficients": [
     {
-      "feature": "pop_density_per_sqmi",
-      "point_estimate": -0.1508767096227862,
-      "mean": -0.1338792273786355,
-      "ci_95_lower": -0.291831079465459,
-      "ci_95_upper": 0.0669016887726027,
-      "stable_sign": false
-    },
-    {
-      "feature": "pct_elderly",
-      "point_estimate": -0.06423777276443164,
-      "mean": -0.06510491979749237,
-      "ci_95_lower": -0.35967249451624816,
-      "ci_95_upper": 0.24669670899704194,
-      "stable_sign": false
-    },
-    {
-      "feature": "avg_household_size",
-      "point_estimate": 0.41921571727786044,
-      "mean": 0.43145404048567887,
-      "ci_95_lower": 0.19667468155550713,
-      "ci_95_upper": 0.6779504477695505,
+      "feature": "pct_foreign_born",
+      "point_estimate": 0.13905050234196792,
+      "mean": 0.13810261253230813,
+      "ci_95_lower": 0.06799698471930243,
+      "ci_95_upper": 0.2028543579923172,
       "stable_sign": true
     },
     {
-      "feature": "median_income",
-      "point_estimate": 0.0923544964358762,
-      "mean": 0.0868597880971633,
-      "ci_95_lower": -0.14699925229291286,
-      "ci_95_upper": 0.3080632276310791,
+      "feature": "avg_household_size",
+      "point_estimate": 0.18872010095700145,
+      "mean": 0.18753185680083131,
+      "ci_95_lower": 0.09062099690264383,
+      "ci_95_upper": 0.27866161275216755,
+      "stable_sign": true
+    },
+    {
+      "feature": "pop_density_per_sqmi",
+      "point_estimate": 0.04037190692696127,
+      "mean": 0.038967963381142404,
+      "ci_95_lower": -0.040907084187461515,
+      "ci_95_upper": 0.10708593480457995,
       "stable_sign": false
     },
     {
       "feature": "public_transport_pct",
-      "point_estimate": 0.0446970076998975,
-      "mean": 0.053407359955188305,
-      "ci_95_lower": -0.14278999473292062,
-      "ci_95_upper": 0.23920145054958306,
-      "stable_sign": false
-    },
-    {
-      "feature": "pct_bachelors_plus",
-      "point_estimate": -0.29583234245326506,
-      "mean": -0.2883661528005706,
-      "ci_95_lower": -0.517446419534637,
-      "ci_95_upper": -0.043674663051762465,
+      "point_estimate": 0.09102751508195257,
+      "mean": 0.0901419940680903,
+      "ci_95_lower": 0.035081230695601075,
+      "ci_95_upper": 0.14606054266171017,
       "stable_sign": true
     },
     {
-      "feature": "pct_non_white",
-      "point_estimate": 0.10413533753899797,
-      "mean": 0.09904050593404544,
-      "ci_95_lower": -0.13760594461627956,
-      "ci_95_upper": 0.32080237713974225,
+      "feature": "pct_elderly",
+      "point_estimate": -0.023092600297748647,
+      "mean": -0.020794602970406757,
+      "ci_95_lower": -0.12150691343182032,
+      "ci_95_upper": 0.07581539260014024,
       "stable_sign": false
     },
     {
-      "feature": "pct_foreign_born",
-      "point_estimate": 0.2840363017450952,
-      "mean": 0.28086414004519816,
-      "ci_95_lower": 0.1211554438528981,
-      "ci_95_upper": 0.4536496718784587,
-      "stable_sign": true
+      "feature": "disease_FLU",
+      "point_estimate": -0.002676720971004276,
+      "mean": -0.004239801154532154,
+      "ci_95_lower": -0.0937680969819661,
+      "ci_95_upper": 0.07366813180299789,
+      "stable_sign": false
+    },
+    {
+      "feature": "disease_RSV",
+      "point_estimate": 0.017251060342728098,
+      "mean": 0.01775420890929927,
+      "ci_95_lower": -0.048234825373576755,
+      "ci_95_upper": 0.09068548134619332,
+      "stable_sign": false
     },
     {
       "feature": "state_DE",
-      "point_estimate": -0.0008066880320384121,
-      "mean": -0.003523309374839032,
-      "ci_95_lower": -0.12381665272859267,
-      "ci_95_upper": 0.12510562131497877,
+      "point_estimate": 0.0042227814242841305,
+      "mean": 0.004231042542343487,
+      "ci_95_lower": -0.020218083553220197,
+      "ci_95_upper": 0.033814679682422265,
       "stable_sign": false
     },
     {
       "feature": "state_NY",
-      "point_estimate": -0.11954892032140205,
-      "mean": -0.12839064012333082,
-      "ci_95_lower": -0.3897551094865457,
-      "ci_95_upper": 0.12914288908127794,
+      "point_estimate": -0.05029475612536337,
+      "mean": -0.0521511070965284,
+      "ci_95_lower": -0.11744002746196186,
+      "ci_95_upper": 0.019994881187414066,
       "stable_sign": false
     },
     {
       "feature": "state_PA",
-      "point_estimate": 0.0878513010100247,
-      "mean": 0.09846907454139367,
-      "ci_95_lower": -0.16276323433830664,
-      "ci_95_upper": 0.36010854642773943,
+      "point_estimate": 0.038883525291074396,
+      "mean": 0.04059473379362866,
+      "ci_95_lower": -0.028076359772248573,
+      "ci_95_upper": 0.10670270509555571,
       "stable_sign": false
     }
   ],
-  "per_state_performance": {
-    "CT": {
-      "n": 9.0,
-      "positives": 3.0,
-      "predicted_positives": 5.0,
-      "accuracy": 0.333,
-      "pr_auc": 0.554
+  "per_disease_performance": {
+    "COVID": {
+      "n": 140.0,
+      "positives": 36.0,
+      "pr_auc": 0.554,
+      "roc_auc": 0.658,
+      "accuracy": 0.736
     },
-    "DE": {
-      "n": 3.0,
-      "positives": 1.0,
-      "predicted_positives": 2.0,
-      "accuracy": 0.667,
-      "pr_auc": 1.0
+    "FLU": {
+      "n": 141.0,
+      "positives": 37.0,
+      "pr_auc": 0.479,
+      "roc_auc": 0.65,
+      "accuracy": 0.695
     },
-    "NY": {
-      "n": 62.0,
-      "positives": 16.0,
-      "predicted_positives": 15.0,
-      "accuracy": 0.823,
-      "pr_auc": 0.682
-    },
-    "PA": {
-      "n": 67.0,
-      "positives": 17.0,
-      "predicted_positives": 23.0,
-      "accuracy": 0.493,
-      "pr_auc": 0.318
+    "RSV": {
+      "n": 76.0,
+      "positives": 20.0,
+      "pr_auc": 0.228,
+      "roc_auc": 0.402,
+      "accuracy": 0.5
     }
   },
-  "n_observations": 141,
-  "n_features": 11,
-  "positive_class_rate": 0.2624113475177305
+  "per_state_performance": {
+    "CT": {
+      "n": 26.0,
+      "positives": 8.0,
+      "pr_auc": 0.309,
+      "accuracy": 0.423
+    },
+    "DE": {
+      "n": 6.0,
+      "positives": 2.0,
+      "pr_auc": 0.417,
+      "accuracy": 0.667
+    },
+    "NY": {
+      "n": 124.0,
+      "positives": 32.0,
+      "pr_auc": 0.734,
+      "accuracy": 0.887
+    },
+    "PA": {
+      "n": 201.0,
+      "positives": 51.0,
+      "pr_auc": 0.218,
+      "accuracy": 0.567
+    }
+  }
 }

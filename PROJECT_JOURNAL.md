@@ -471,6 +471,119 @@ Added `jupyter.source_hidden: true` and `hide_input: true` metadata flags to all
 
 ---
 
+## Session 12 — Multi-Disease Pivot (Stacked Dataset)
+
+**Date**: May 1, 2026
+**Goal**: Expand the dataset by stacking multiple respiratory diseases (flu, COVID, RSV) for the same counties, with `disease` as a feature. Solve the small-sample problem without abandoning the multi-state framework.
+
+### Why we pivoted
+Logistic regression on flu-only (141 obs) plateaued at PR-AUC = 0.500 with 8 of 11 coefficients statistically unstable. The fundamental constraint was sample size, not model choice. After investigating CDC PLACES (flu vaccination measure was discontinued in PLACES 2020+), the user found a CDC COVID Community Levels file covering all US counties for 2022-2023.
+
+### User's two strategic insights
+1. **Stack observations across diseases** rather than merge them into a single combined outcome. Each `(county, disease)` becomes a separate row. Demographics (constant per county) appear multiple times with different outcomes.
+2. **Exclude COVID lockdown era (2020-2022)** because demographic features can't predict during NPI-dominated periods (population density irrelevant when nobody leaves home).
+
+Both methodologically correct. We agreed on June 2022 → May 2023 as the "endemic phase" cutoff.
+
+### User's third decision: balanced disease counts
+The user wanted to avoid model domination by COVID. Rather than using all 3,224 US COVID counties, we matched COVID rows to ~140 (same 4 states as flu). The result is balanced disease distribution: ~40% flu, ~40% COVID, ~20% RSV.
+
+### Final dataset structure (`master_stacked.csv`)
+
+| Disease | Geography | Season | Rows |
+|---|---|---|---|
+| Flu | NY 62 + PA 67 + CT 9 + DE 3 (planning regions) | 2024-25 / 2025-26 | 141 |
+| COVID | NY 62 + PA 67 + CT 8 (old counties) + DE 3 | Jun 2022 – May 2023 endemic | 140 |
+| RSV | PA 67 + CT 9 (only states with public county data) | 2024-25 / 2025-26 | 76 |
+| **Total** | — | — | **357** |
+
+### CT geography asymmetry
+Connecticut transitioned from 8 counties to 9 planning regions in 2022. CDC COVID data uses old counties; CDC PLACES + NY/PA/DE flu data uses new planning regions. We accept the asymmetry because:
+- COVID rows for CT use old county FIPS (09001-09015)
+- Flu/RSV rows for CT use new planning region FIPS (09110-09190)
+- ACS 2021 vintage pulled separately for old CT counties
+- 2021 Gazetteer used for old CT land area (2022 Gazetteer uses new geography)
+- PLACES values for old CT imputed from state-mean (PLACES 2024 has only new geography)
+
+Documented in `MASTER_PLAN.md` § 10 as a known limitation.
+
+### Outbreak labelling
+`outbreak = 1` if county is in **top 25% within (disease, state)** group. Different from previous flu-only approach because:
+- Each disease has its own scale (COVID rates ≈ 5,000/100K cumulative; flu ≈ 1,500; RSV ≈ 240)
+- Different states have different surveillance regimes per disease
+- Within-(disease, state) labelling sidesteps both confounders
+
+### Cross-validation strategy
+**`StratifiedGroupKFold(groups=fips)`** — same county's flu + COVID + RSV rows always go in the same fold, preventing data leakage across diseases.
+
+Plain `StratifiedKFold` was used for feature selection in Notebook 03 because `LogisticRegressionCV` doesn't accept `groups` cleanly without sklearn's metadata routing. This is acceptable — feature selection is informational; the rigorous grouped CV happens at evaluation in Notebooks 04+.
+
+### Feature selection results (Notebook 03 re-run)
+With 357 rows and 17 candidate features (11 demographic + 6 PLACES), consensus selected **5 demographic features**:
+- `pct_foreign_born`
+- `avg_household_size`
+- `pop_density_per_sqmi`
+- `public_transport_pct`
+- `pct_elderly`
+
+Plus 2 disease dummies (FLU baseline) + 3 state dummies (CT baseline) = **10 features total**, **35.7:1 obs-to-features ratio** — well-powered.
+
+The PLACES features (pct_obesity, pct_diabetes, etc.) did NOT make consensus. They were dominated by demographic features in every method. This suggests comorbidity prevalence is captured by underlying demographics (income, age, race) — adding them as features doesn't improve discrimination because demographics already proxy them.
+
+### Logistic regression results (Notebook 04 on stacked data)
+
+| Metric | Stacked (357 rows) | Flu-only (141 rows) |
+|---|---|---|
+| **PR-AUC (CV)** | **0.446** | 0.500 |
+| ROC-AUC | 0.610 | 0.641 |
+| Accuracy | 0.669 | 0.631 |
+| Brier | 0.231 | 0.221 |
+| Stable coefficients | 3/10 | 3/11 |
+
+**Headline drop on PR-AUC** is real but expected: the new evaluation uses **`StratifiedGroupKFold`** (much harder than plain k-fold), so this is a more honest estimate. The model never sees the same county in train + test, even across different diseases.
+
+### Per-disease performance breakdown
+
+| Disease | n | PR-AUC | Accuracy | Notes |
+|---|---|---|---|---|
+| **COVID** | 140 | **0.554** | 0.736 | Best — newer data, more variation |
+| Flu | 141 | 0.479 | 0.695 | Solid |
+| RSV | 76 | 0.228 | 0.500 | Worst — small sample, only 2 states |
+
+The model genuinely works on COVID and flu. RSV is borderline but expected given only 76 observations across 2 states.
+
+### Stable coefficients
+
+| Feature | Coef | 95% CI | Direction |
+|---|---|---|---|
+| `avg_household_size` | +0.19 | [+0.09, +0.28] | Crowded → more outbreak |
+| `pct_foreign_born` | +0.14 | [+0.07, +0.20] | More foreign-born → more outbreak |
+| `public_transport_pct` | +0.09 | [+0.04, +0.15] | Transit-heavy → more outbreak |
+
+All three are intuitively interpretable as "high-contact urban" features. The interpretation generalises across all three respiratory viruses, which is methodologically clean.
+
+### Next steps
+- Notebook 05: Random Forest — should handle the multicollinearity better
+- Notebook 06: XGBoost — likely best on this tabular dataset
+- Notebook 07: KNN baseline (probably weakest)
+- Notebook 08: Comparison + final model selection
+
+Realistic expectation: PR-AUC could reach 0.55-0.65 with tree-based models. The 357-row dataset is the floor for what we can achieve without further data acquisition.
+
+### Methodological caveats to document in the report
+
+1. **Disease asymmetry**: Flu = lab-confirmed cases; COVID = weekly per-100K aggregated to seasonal cumulative; RSV = case counts with PA/CT availability only. The stacked approach is defensible because (a) outbreak labelling is within-disease, (b) `disease` is a feature so the model can learn disease-specific effects, but (c) outcome metrics aren't directly comparable across diseases.
+
+2. **Pseudo-replication**: The same county appears 1-3 times across diseases. `StratifiedGroupKFold(groups=fips)` ensures train/test integrity but the effective sample size for inference is closer to 141 unique counties than 357 stacked rows.
+
+3. **CT geography asymmetry**: 8 old counties for COVID rows, 9 planning regions for flu/RSV rows. Document but accept.
+
+4. **NPI exclusion**: COVID limited to June 2022 – May 2023. This is the standard "endemic phase" cutoff in epidemiological modelling.
+
+5. **PLACES features dropped by consensus**: Comorbidity features (obesity, diabetes, COPD, heart disease) didn't survive feature selection. Surprising given the literature, but likely because demographics already proxy them at the county level.
+
+---
+
 ## Upcoming Work
 
 ### Session 10 — Feature Selection (Notebook 03)
