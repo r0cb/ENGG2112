@@ -1,0 +1,78 @@
+{
+  "model": "KNN",
+  "dataset": "master_stacked.csv",
+  "n_observations": 357,
+  "n_features": 10,
+  "positive_class_rate": 0.2605042016806723,
+  "cv_strategy": "StratifiedGroupKFold(n_splits=5, groups=fips)",
+  "best_params": {
+    "metric": "manhattan",
+    "n_neighbors": 21,
+    "weights": "distance"
+  },
+  "cv_metrics": {
+    "accuracy": 0.7815126050420168,
+    "precision": 0.8,
+    "recall": 0.21505376344086022,
+    "f1": 0.3389830508474576,
+    "roc_auc": 0.6872556207233627,
+    "pr_auc": 0.5097732977295552,
+    "brier": 0.17001326282602697
+  },
+  "cv_metrics_calibrated": {
+    "brier": 0.15897111174918438
+  },
+  "baseline_pr_auc": 0.2605042016806723,
+  "feature_importance": {
+    "permutation": {
+      "avg_household_size": 0.33354434153388424,
+      "pct_elderly": 0.3141974671392568,
+      "disease_FLU": 0.2966855669859655,
+      "pct_foreign_born": 0.22552256060424672,
+      "disease_RSV": 0.18403359021778817,
+      "state_PA": 0.08184286186088777,
+      "state_NY": 0.06651684613475176,
+      "public_transport_pct": 0.037176969780785295,
+      "pop_density_per_sqmi": 0.010620755985338215,
+      "state_DE": 0.00021615354261480166
+    },
+    "permutation_std": {
+      "pct_foreign_born": 0.019021162440613932,
+      "pop_density_per_sqmi": 0.0033183518249111244,
+      "avg_household_size": 0.03107681636811809,
+      "public_transport_pct": 0.009077817557123962,
+      "pct_elderly": 0.02347326710749346,
+      "disease_FLU": 0.024120500546789624,
+      "disease_RSV": 0.02425604011879533,
+      "state_DE": 0.0002945364062947693,
+      "state_NY": 0.013455453317758215,
+      "state_PA": 0.015120386988728246
+    }
+  },
+  "per_disease_performance": {
+    "COVID": {
+      "n": 140,
+      "positives": 36,
+      "pr_auc": 0.626,
+      "pr_auc_calibrated": 0.586,
+      "roc_auc": 0.749,
+      "accuracy": 0.814
+    },
+    "FLU": {
+      "n": 141,
+      "positives": 37,
+      "pr_auc": 0.484,
+      "pr_auc_calibrated": 0.502,
+      "roc_auc": 0.663,
+      "accuracy": 0.78
+    },
+    "RSV": {
+      "n": 76,
+      "positives": 20,
+      "pr_auc": 0.326,
+      "pr_auc_calibrated": 0.312,
+      "roc_auc": 0.583,
+      "accuracy": 0.724
+    }
+  }
+}

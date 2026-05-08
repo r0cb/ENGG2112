@@ -1,0 +1,93 @@
+{
+  "model": "XGBoost",
+  "dataset": "master_stacked.csv",
+  "n_observations": 357,
+  "n_features": 10,
+  "positive_class_rate": 0.2605042016806723,
+  "cv_strategy": "StratifiedGroupKFold(n_splits=5, groups=fips)",
+  "best_params": {
+    "colsample_bytree": 1.0,
+    "learning_rate": 0.1,
+    "max_depth": 3,
+    "n_estimators": 300,
+    "subsample": 0.8
+  },
+  "scale_pos_weight": 2.84,
+  "cv_metrics": {
+    "accuracy": 0.7254901960784313,
+    "precision": 0.4666666666666667,
+    "recall": 0.3763440860215054,
+    "f1": 0.4166666666666667,
+    "roc_auc": 0.6652818507657218,
+    "pr_auc": 0.49054846172362077,
+    "brier": 0.19849967110290653
+  },
+  "cv_metrics_calibrated": {
+    "brier": 0.16646025154054275
+  },
+  "baseline_pr_auc": 0.2605042016806723,
+  "feature_importance": {
+    "gain": {
+      "state_DE": 0.1575327068567276,
+      "pct_foreign_born": 0.11485660076141357,
+      "state_NY": 0.11230161786079407,
+      "avg_household_size": 0.11202450841665268,
+      "pop_density_per_sqmi": 0.10345196723937988,
+      "public_transport_pct": 0.09872288256883621,
+      "state_PA": 0.09209079295396805,
+      "pct_elderly": 0.08451162278652191,
+      "disease_RSV": 0.06400562822818756,
+      "disease_FLU": 0.060501765459775925
+    },
+    "permutation": {
+      "pct_foreign_born": 0.16251801059886628,
+      "pop_density_per_sqmi": 0.14411129812884999,
+      "public_transport_pct": 0.12891902555676854,
+      "avg_household_size": 0.09785744139773958,
+      "disease_FLU": 0.07129009679758139,
+      "pct_elderly": 0.0662088289064632,
+      "disease_RSV": 0.050278807852442174,
+      "state_NY": 0.006271461377041487,
+      "state_PA": 0.00011458597990404348,
+      "state_DE": 1.645073096432359e-05
+    },
+    "permutation_std": {
+      "pct_foreign_born": 0.01954670032655181,
+      "avg_household_size": 0.02143662138674912,
+      "pop_density_per_sqmi": 0.021982122493577772,
+      "public_transport_pct": 0.02080476632742968,
+      "pct_elderly": 0.017469223192703116,
+      "disease_FLU": 0.008290660836014693,
+      "disease_RSV": 0.00894589878171902,
+      "state_DE": 0.00015502023773259247,
+      "state_NY": 0.0028670206436180895,
+      "state_PA": 0.0016172497660388006
+    }
+  },
+  "per_disease_performance": {
+    "COVID": {
+      "n": 140,
+      "positives": 36,
+      "pr_auc": 0.636,
+      "pr_auc_calibrated": 0.616,
+      "roc_auc": 0.769,
+      "accuracy": 0.786
+    },
+    "FLU": {
+      "n": 141,
+      "positives": 37,
+      "pr_auc": 0.453,
+      "pr_auc_calibrated": 0.449,
+      "roc_auc": 0.623,
+      "accuracy": 0.695
+    },
+    "RSV": {
+      "n": 76,
+      "positives": 20,
+      "pr_auc": 0.319,
+      "pr_auc_calibrated": 0.314,
+      "roc_auc": 0.536,
+      "accuracy": 0.671
+    }
+  }
+}

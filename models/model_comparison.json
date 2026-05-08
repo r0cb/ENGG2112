@@ -1,0 +1,53 @@
+{
+  "dataset": "master_stacked.csv, 357 rows",
+  "cv_strategy": "StratifiedGroupKFold(n_splits=5, groups=fips)",
+  "headline_metric": "PR-AUC",
+  "baseline_pr_auc": 0.2605042016806723,
+  "leaderboard": [
+    {
+      "Model": "KNN",
+      "PR-AUC": 0.5098,
+      "ROC-AUC": 0.6873,
+      "Brier (cal)": 0.159,
+      "F1": 0.339,
+      "Recall": 0.2151,
+      "Lift vs baseline": 1.96
+    },
+    {
+      "Model": "RF",
+      "PR-AUC": 0.5064,
+      "ROC-AUC": 0.6523,
+      "Brier (cal)": 0.1622,
+      "F1": 0.3906,
+      "Recall": 0.2688,
+      "Lift vs baseline": 1.94
+    },
+    {
+      "Model": "XGB",
+      "PR-AUC": 0.4905,
+      "ROC-AUC": 0.6653,
+      "Brier (cal)": 0.1665,
+      "F1": 0.4167,
+      "Recall": 0.3763,
+      "Lift vs baseline": 1.88
+    },
+    {
+      "Model": "LR",
+      "PR-AUC": 0.4459,
+      "ROC-AUC": 0.6097,
+      "Brier (cal)": 0.2309,
+      "F1": 0.3723,
+      "Recall": 0.3763,
+      "Lift vs baseline": 1.71
+    }
+  ],
+  "production_model": "KNN",
+  "production_pr_auc": 0.5098,
+  "lift_vs_baseline": 1.957,
+  "charts": [
+    "comparison_overall.png",
+    "comparison_per_disease.png",
+    "comparison_importance_heatmap.png",
+    "comparison_radar.png"
+  ]
+}
