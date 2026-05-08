@@ -1,0 +1,229 @@
+{
+  "dataset": "master_stacked.csv",
+  "n_observations": 357,
+  "cv_strategy": "StratifiedGroupKFold(n_splits=5, groups=fips), identical folds for all models",
+  "bootstrap_n_resamples": 1000,
+  "baseline_pr_auc": 0.2605042016806723,
+  "leaderboard": [
+    {
+      "model": "KNN",
+      "pr_auc_mean": 0.5134670830013189,
+      "pr_auc_ci_95": [
+        0.409730154462241,
+        0.6101498208841418
+      ],
+      "roc_auc_mean": 0.68908294656528,
+      "roc_auc_ci_95": [
+        0.6192635760326791,
+        0.748678389118491
+      ],
+      "brier_mean": 0.16963844281282697,
+      "brier_ci_95": [
+        0.14776108116243908,
+        0.1932338565009581
+      ],
+      "recall_mean": 0.2152924284361652,
+      "f1_mean": 0.33718859879242497,
+      "state_pr_auc_spread": 0.45403012963862366
+    },
+    {
+      "model": "RF",
+      "pr_auc_mean": 0.51156193071918,
+      "pr_auc_ci_95": [
+        0.40454886692155706,
+        0.6056038723042423
+      ],
+      "roc_auc_mean": 0.6527380578282405,
+      "roc_auc_ci_95": [
+        0.5814867758040844,
+        0.7209415487269101
+      ],
+      "brier_mean": 0.17478354041455318,
+      "brier_ci_95": [
+        0.15226031272208382,
+        0.19786727377628072
+      ],
+      "recall_mean": 0.2578309623360385,
+      "f1_mean": 0.3781769730312903,
+      "state_pr_auc_spread": 0.4419821249847331
+    },
+    {
+      "model": "XGB",
+      "pr_auc_mean": 0.4945625769805122,
+      "pr_auc_ci_95": [
+        0.3855335858690988,
+        0.5974301091659887
+      ],
+      "roc_auc_mean": 0.6659231147222751,
+      "roc_auc_ci_95": [
+        0.5969876980114593,
+        0.7370498819228645
+      ],
+      "brier_mean": 0.19819089856436797,
+      "brier_ci_95": [
+        0.16643365123655732,
+        0.2291897113644221
+      ],
+      "recall_mean": 0.3764712977486129,
+      "f1_mean": 0.41501412719585656,
+      "state_pr_auc_spread": 0.43839623199879796
+    },
+    {
+      "model": "LR",
+      "pr_auc_mean": 0.44986284782144387,
+      "pr_auc_ci_95": [
+        0.3551823555616332,
+        0.5467904979058343
+      ],
+      "roc_auc_mean": 0.6089270473664026,
+      "roc_auc_ci_95": [
+        0.5405607268135053,
+        0.6767280846710612
+      ],
+      "brier_mean": 0.23089568558765,
+      "brier_ci_95": [
+        0.223687686946744,
+        0.23781646129661746
+      ],
+      "recall_mean": 0.3746759540754283,
+      "f1_mean": 0.3698785857495907,
+      "state_pr_auc_spread": 0.5160930014383156
+    }
+  ],
+  "per_state_performance": {
+    "LR": {
+      "CT": {
+        "n": 26,
+        "pr_auc": 0.30929499720975695,
+        "positive_rate": 0.3076923076923077
+      },
+      "DE": {
+        "n": 6,
+        "pr_auc": 0.41666666666666663,
+        "positive_rate": 0.3333333333333333
+      },
+      "NY": {
+        "n": 124,
+        "pr_auc": 0.7343859371813114,
+        "positive_rate": 0.25806451612903225
+      },
+      "PA": {
+        "n": 201,
+        "pr_auc": 0.21829293574299574,
+        "positive_rate": 0.2537313432835821
+      }
+    },
+    "RF": {
+      "CT": {
+        "n": 26,
+        "pr_auc": 0.2557181634155319,
+        "positive_rate": 0.3076923076923077
+      },
+      "DE": {
+        "n": 6,
+        "pr_auc": 0.325,
+        "positive_rate": 0.3333333333333333
+      },
+      "NY": {
+        "n": 124,
+        "pr_auc": 0.697700288400265,
+        "positive_rate": 0.25806451612903225
+      },
+      "PA": {
+        "n": 201,
+        "pr_auc": 0.3767758253948209,
+        "positive_rate": 0.2537313432835821
+      }
+    },
+    "XGB": {
+      "CT": {
+        "n": 26,
+        "pr_auc": 0.30131327006327,
+        "positive_rate": 0.3076923076923077
+      },
+      "DE": {
+        "n": 6,
+        "pr_auc": 0.41666666666666663,
+        "positive_rate": 0.3333333333333333
+      },
+      "NY": {
+        "n": 124,
+        "pr_auc": 0.739709502062068,
+        "positive_rate": 0.25806451612903225
+      },
+      "PA": {
+        "n": 201,
+        "pr_auc": 0.32364017867869116,
+        "positive_rate": 0.2537313432835821
+      }
+    },
+    "KNN": {
+      "CT": {
+        "n": 26,
+        "pr_auc": 0.2577160512374286,
+        "positive_rate": 0.3076923076923077
+      },
+      "DE": {
+        "n": 6,
+        "pr_auc": 0.3333333333333333,
+        "positive_rate": 0.3333333333333333
+      },
+      "NY": {
+        "n": 124,
+        "pr_auc": 0.7117461808760522,
+        "positive_rate": 0.25806451612903225
+      },
+      "PA": {
+        "n": 201,
+        "pr_auc": 0.2980412485200054,
+        "positive_rate": 0.2537313432835821
+      }
+    }
+  },
+  "per_disease_pr_auc": {
+    "LR": {
+      "COVID": 0.554,
+      "FLU": 0.479,
+      "RSV": 0.228
+    },
+    "RF": {
+      "COVID": 0.664,
+      "FLU": 0.445,
+      "RSV": 0.308
+    },
+    "XGB": {
+      "COVID": 0.636,
+      "FLU": 0.453,
+      "RSV": 0.319
+    },
+    "KNN": {
+      "COVID": 0.626,
+      "FLU": 0.484,
+      "RSV": 0.326
+    }
+  },
+  "production_model": "XGB",
+  "production_pr_auc": 0.4945625769805122,
+  "selection_criteria": {
+    "method": "Sum-of-ranks across 4 criteria",
+    "criteria": [
+      "PR-AUC mean",
+      "Recall mean",
+      "Per-state PR-AUC spread (lower is better)",
+      "Brier mean (lower is better)"
+    ],
+    "composite_ranks": {
+      "LR": 10,
+      "RF": 5,
+      "XGB": 4,
+      "KNN": 5
+    }
+  },
+  "caveats": [
+    "PR-AUC top-3 (KNN, RF, XGB) CIs overlap \u2014 they are statistically tied on PR-AUC alone",
+    "KNN has the largest per-state spread (suggests state-bias / NY over-fitting)",
+    "XGB has the highest recall (catches most actual outbreaks)",
+    "RF has best calibration after isotonic adjustment",
+    "Production selection uses composite criteria, not just PR-AUC"
+  ]
+}

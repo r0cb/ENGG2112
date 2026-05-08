@@ -33,8 +33,7 @@
     "n_features_final": 10,
     "obs_to_features_ratio": 35.7,
     "cv_strategy": "StratifiedGroupKFold(n_splits=5, groups=fips)",
-    "dataset_source": "master_stacked.csv",
-    "vaccination_added": true
+    "dataset_source": "master_stacked.csv"
   },
   "rankings": [
     {
@@ -46,8 +45,8 @@
       "rf_perm": 1,
       "rfecv": 1,
       "borda": 104,
-      "top8_in_N": 5,
-      "selected": true
+      "top8_in_methods": 5,
+      "consensus": true
     },
     {
       "feature": "pop_density_per_sqmi",
@@ -58,32 +57,32 @@
       "rf_perm": 5,
       "rfecv": 4,
       "borda": 82,
-      "top8_in_N": 4,
-      "selected": true
+      "top8_in_methods": 4,
+      "consensus": true
     },
     {
       "feature": "avg_household_size",
       "pearson": 2,
       "spearman": 1,
-      "mutual_info": 10,
+      "mutual_info": 9,
       "lasso": 1,
       "rf_perm": 13,
       "rfecv": 6,
-      "borda": 81,
-      "top8_in_N": 3,
-      "selected": true
+      "borda": 82,
+      "top8_in_methods": 3,
+      "consensus": true
     },
     {
       "feature": "pct_diabetes",
-      "pearson": 10,
+      "pearson": 9,
       "spearman": 6,
       "mutual_info": 13,
       "lasso": 10,
       "rf_perm": 3,
       "rfecv": 1,
-      "borda": 71,
-      "top8_in_N": 2,
-      "selected": false
+      "borda": 72,
+      "top8_in_methods": 2,
+      "consensus": false
     },
     {
       "feature": "pct_non_white",
@@ -94,8 +93,8 @@
       "rf_perm": 16,
       "rfecv": 1,
       "borda": 71,
-      "top8_in_N": 2,
-      "selected": false
+      "top8_in_methods": 2,
+      "consensus": false
     },
     {
       "feature": "public_transport_pct",
@@ -106,8 +105,8 @@
       "rf_perm": 7,
       "rfecv": 5,
       "borda": 70,
-      "top8_in_N": 3,
-      "selected": true
+      "top8_in_methods": 3,
+      "consensus": true
     },
     {
       "feature": "pct_elderly",
@@ -118,8 +117,8 @@
       "rf_perm": 14,
       "rfecv": 2,
       "borda": 70,
-      "top8_in_N": 3,
-      "selected": true
+      "top8_in_methods": 3,
+      "consensus": true
     },
     {
       "feature": "median_income",
@@ -130,8 +129,8 @@
       "rf_perm": 14,
       "rfecv": 3,
       "borda": 69,
-      "top8_in_N": 2,
-      "selected": false
+      "top8_in_methods": 2,
+      "consensus": false
     },
     {
       "feature": "unemployment_rate",
@@ -142,20 +141,8 @@
       "rf_perm": 2,
       "rfecv": 12,
       "borda": 58,
-      "top8_in_N": 2,
-      "selected": false
-    },
-    {
-      "feature": "median_age",
-      "pearson": 8,
-      "spearman": 11,
-      "mutual_info": 12,
-      "lasso": 10,
-      "rf_perm": 10,
-      "rfecv": 9,
-      "borda": 54,
-      "top8_in_N": 1,
-      "selected": false
+      "top8_in_methods": 2,
+      "consensus": false
     },
     {
       "feature": "pct_copd",
@@ -166,20 +153,32 @@
       "rf_perm": 17,
       "rfecv": 11,
       "borda": 54,
-      "top8_in_N": 1,
-      "selected": false
+      "top8_in_methods": 1,
+      "consensus": false
+    },
+    {
+      "feature": "median_age",
+      "pearson": 8,
+      "spearman": 11,
+      "mutual_info": 13,
+      "lasso": 10,
+      "rf_perm": 10,
+      "rfecv": 9,
+      "borda": 53,
+      "top8_in_methods": 1,
+      "consensus": false
     },
     {
       "feature": "pct_checkup",
       "pearson": 16,
       "spearman": 15,
-      "mutual_info": 5,
+      "mutual_info": 4,
       "lasso": 10,
       "rf_perm": 9,
       "rfecv": 7,
-      "borda": 52,
-      "top8_in_N": 1,
-      "selected": false
+      "borda": 53,
+      "top8_in_methods": 1,
+      "consensus": false
     },
     {
       "feature": "pct_obesity",
@@ -190,32 +189,32 @@
       "rf_perm": 4,
       "rfecv": 10,
       "borda": 51,
-      "top8_in_N": 2,
-      "selected": false
+      "top8_in_methods": 2,
+      "consensus": false
     },
     {
       "feature": "pct_chd",
       "pearson": 11,
       "spearman": 9,
-      "mutual_info": 14,
+      "mutual_info": 13,
       "lasso": 10,
       "rf_perm": 10,
       "rfecv": 14,
-      "borda": 46,
-      "top8_in_N": 0,
-      "selected": false
+      "borda": 47,
+      "top8_in_methods": 0,
+      "consensus": false
     },
     {
       "feature": "pct_vaccinated",
-      "pearson": 15,
+      "pearson": 14,
       "spearman": 7,
       "mutual_info": 18,
       "lasso": 10,
       "rf_perm": 6,
       "rfecv": 15,
-      "borda": 43,
-      "top8_in_N": 2,
-      "selected": false
+      "borda": 44,
+      "top8_in_methods": 2,
+      "consensus": false
     },
     {
       "feature": "pct_bachelors_plus",
@@ -226,8 +225,8 @@
       "rf_perm": 12,
       "rfecv": 1,
       "borda": 38,
-      "top8_in_N": 0,
-      "selected": false
+      "top8_in_methods": 0,
+      "consensus": false
     },
     {
       "feature": "poverty_rate",
@@ -238,8 +237,8 @@
       "rf_perm": 8,
       "rfecv": 13,
       "borda": 35,
-      "top8_in_N": 1,
-      "selected": false
+      "top8_in_methods": 1,
+      "consensus": false
     },
     {
       "feature": "pct_csmoking",
@@ -250,8 +249,8 @@
       "rf_perm": 18,
       "rfecv": 8,
       "borda": 35,
-      "top8_in_N": 0,
-      "selected": false
+      "top8_in_methods": 0,
+      "consensus": false
     }
   ]
 }

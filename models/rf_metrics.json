@@ -6,87 +6,87 @@
   "positive_class_rate": 0.2605042016806723,
   "cv_strategy": "StratifiedGroupKFold(n_splits=5, groups=fips)",
   "best_params": {
-    "max_depth": "None",
+    "max_depth": 10,
     "max_features": "sqrt",
-    "min_samples_split": 5,
+    "min_samples_split": 2,
     "n_estimators": 500
   },
   "class_weight": "balanced",
   "cv_metrics": {
     "accuracy": 0.7815126050420168,
-    "precision": 0.7142857142857143,
-    "recall": 0.26881720430107525,
-    "f1": 0.390625,
-    "roc_auc": 0.652289019224503,
-    "pr_auc": 0.5063969492623259,
-    "brier": 0.17694156153533208
+    "precision": 0.7272727272727273,
+    "recall": 0.25806451612903225,
+    "f1": 0.38095238095238093,
+    "roc_auc": 0.6513522319973932,
+    "pr_auc": 0.5078641549028199,
+    "brier": 0.17505001481557209
   },
   "cv_metrics_calibrated": {
-    "brier": 0.1621721441810497
+    "brier": 0.1598793946483022
   },
   "baseline_pr_auc": 0.2605042016806723,
   "feature_importance": {
     "gini": {
-      "pct_foreign_born": 0.18561271810678548,
-      "avg_household_size": 0.18146453346264446,
-      "pop_density_per_sqmi": 0.17980998381794724,
-      "public_transport_pct": 0.1696773417174467,
-      "pct_elderly": 0.1631863525000439,
-      "state_NY": 0.034685465954065985,
-      "state_PA": 0.02999859358679222,
-      "disease_FLU": 0.028551800351403138,
-      "disease_RSV": 0.02346664483465439,
-      "state_DE": 0.003546565668216557
+      "pct_foreign_born": 0.17826876248725076,
+      "avg_household_size": 0.1708005235257479,
+      "pop_density_per_sqmi": 0.16715957726092834,
+      "public_transport_pct": 0.1638794109777216,
+      "pct_elderly": 0.1544307004689152,
+      "disease_FLU": 0.06350246068581711,
+      "state_NY": 0.035367229034150634,
+      "disease_RSV": 0.03423922136042067,
+      "state_PA": 0.029146828019794735,
+      "state_DE": 0.003205286179252935
     },
     "permutation": {
-      "pct_foreign_born": 0.07990554645942691,
-      "avg_household_size": 0.07903567259224377,
-      "public_transport_pct": 0.06862012232012991,
-      "disease_FLU": 0.06472140048206619,
-      "pop_density_per_sqmi": 0.06093260362901973,
-      "pct_elderly": 0.05607880139849139,
-      "disease_RSV": 0.04047220514636873,
-      "state_NY": 0.022602108492284386,
-      "state_PA": 0.01295906027482399,
-      "state_DE": 0.0005965846326629664
+      "disease_FLU": 0.0882005166036902,
+      "pct_foreign_born": 0.07152857811297114,
+      "public_transport_pct": 0.05728341846142868,
+      "avg_household_size": 0.054257845986851946,
+      "pop_density_per_sqmi": 0.04538574489901371,
+      "disease_RSV": 0.04375450677500434,
+      "pct_elderly": 0.039789493107843625,
+      "state_NY": 0.015130389507743784,
+      "state_PA": 0.0062252561848235655,
+      "state_DE": 0.0
     },
     "permutation_std": {
-      "pct_foreign_born": 0.011107315057663577,
-      "avg_household_size": 0.01687575727422814,
-      "pop_density_per_sqmi": 0.014109650067460915,
-      "public_transport_pct": 0.014348750800130367,
-      "pct_elderly": 0.011489754627138143,
-      "disease_FLU": 0.006675643195410287,
-      "disease_RSV": 0.0057700232940338745,
-      "state_DE": 0.0004066275488446671,
-      "state_NY": 0.007438228663784161,
-      "state_PA": 0.005730222352438494
+      "pct_foreign_born": 0.011402955146956389,
+      "pop_density_per_sqmi": 0.009672241969718554,
+      "avg_household_size": 0.012675416106880158,
+      "public_transport_pct": 0.012665450899797497,
+      "pct_elderly": 0.009684124054922154,
+      "disease_FLU": 0.008987325177060412,
+      "disease_RSV": 0.007008229439969253,
+      "state_DE": 0.0,
+      "state_NY": 0.004381801854020537,
+      "state_PA": 0.002065375096289164
     }
   },
   "per_disease_performance": {
     "COVID": {
       "n": 140.0,
       "positives": 36.0,
-      "pr_auc": 0.653,
-      "pr_auc_calibrated": 0.639,
-      "roc_auc": 0.722,
+      "pr_auc": 0.664,
+      "pr_auc_calibrated": 0.646,
+      "roc_auc": 0.724,
       "accuracy": 0.836
     },
     "FLU": {
       "n": 141.0,
       "positives": 37.0,
-      "pr_auc": 0.47,
-      "pr_auc_calibrated": 0.48,
-      "roc_auc": 0.638,
-      "accuracy": 0.766
+      "pr_auc": 0.445,
+      "pr_auc_calibrated": 0.444,
+      "roc_auc": 0.621,
+      "accuracy": 0.759
     },
     "RSV": {
       "n": 76.0,
       "positives": 20.0,
-      "pr_auc": 0.287,
-      "pr_auc_calibrated": 0.292,
-      "roc_auc": 0.511,
-      "accuracy": 0.711
+      "pr_auc": 0.308,
+      "pr_auc_calibrated": 0.312,
+      "roc_auc": 0.533,
+      "accuracy": 0.724
     }
   }
 }

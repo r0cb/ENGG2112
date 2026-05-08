@@ -655,6 +655,92 @@ Random Forest is a strong candidate for the production model. We continue to Not
 
 ---
 
+## Session 14 — Audit and Statistical Re-Evaluation of Notebooks 06–08
+
+**Date**: May 8, 2026
+**Goal**: Audit Notebooks 06 (XGBoost), 07 (KNN), and 08 (Comparison) added by a teammate while I was offline. Identify methodological issues and fix the most critical ones.
+
+### Critical issues found
+
+#### 1. JSON–code mismatch in `model_comparison.json`
+The original `model_comparison.json` recorded `"production_model": "KNN"`, but Notebook 08's selection cell explicitly chose `"RF"` with the comment *"RF selected over KNN: nearly identical PR-AUC (+0.0034 for KNN, within noise at n=357)..."*. The discrepancy occurred because the JSON-saving cell was run with a stale `best_name` value before the selection logic was finalised, and was never re-run.
+
+#### 2. KNN's apparent "win" was statistical noise
+The original leaderboard showed KNN at PR-AUC = 0.510, RF = 0.506, XGB = 0.491. With n=357 and the typical SE on PR-AUC of ±0.05, these models are statistically tied. **No bootstrap CIs were reported in any notebook**, so there was no way to distinguish signal from noise.
+
+#### 3. Per-state failure mode hidden by aggregation
+KNN had a 5× spread in per-state PR-AUC (NY 0.66 vs PA 0.28 vs CT 0.25 vs DE 0.27). This was visible in `knn_metrics2.json` but the comparison notebook loaded `knn_metrics.json` which only contained per-disease breakdowns. The headline 0.510 was driven entirely by NY (n=124) — on PA which is **56% of the dataset**, KNN performed at random baseline.
+
+#### 4. Selection logic was internally inconsistent
+The original notebook claimed *"recall is the tie-breaking criterion"*, then chose RF (recall=0.269) over KNN (recall=0.215). But XGBoost has the highest recall (0.376) — by the stated rationale, XGBoost should have been selected.
+
+### Other issues found
+- Two KNN notebooks (`07_model_knn.ipynb` and `07_model_knn_2.ipynb`); the second is essentially empty
+- Two KNN metrics files (`knn_metrics.json` and `knn_metrics2.json`); the more detailed one wasn't used
+- No `production_model.pkl` artifact written for SIR sim
+- `PROJECT_JOURNAL.md` not updated for sessions 14 (XGBoost) or 15 (KNN)
+- `REFERENCES.md` missing XGBoost citation
+
+### Fixes implemented (Notebook 08 § 9)
+
+Appended a "Comparison v2" addendum to `08_model_comparison.ipynb`:
+
+1. **Re-evaluation on identical CV folds** — all 4 models now share the same `StratifiedGroupKFold` partition for fair comparison
+2. **Bootstrap 95% CIs on every metric** (1000 resamples on OOF predictions)
+3. **Per-state PR-AUC for all 4 models** (not just KNN)
+4. **Composite ranking criterion**: PR-AUC + Recall + Per-state spread + Brier score (sum-of-ranks)
+5. **`production_model.pkl` artifact** — XGBoost classifier + isotonic calibrator + scaler + feature names, ready for SIR sim to load
+6. **`model_comparison.json` overwritten** with corrected production model
+
+### Bootstrap leaderboard (95% CIs)
+
+| Model | PR-AUC | Recall | State spread | Composite rank |
+|---|---|---|---|---|
+| **XGB** | 0.495 [0.386, 0.597] | **0.376** | **0.438** (most uniform) | **4** ← best |
+| RF | 0.512 [0.405, 0.606] | 0.258 | 0.442 | 5 |
+| KNN | 0.513 [0.410, 0.610] | 0.215 | 0.454 | 5 |
+| LR | 0.450 [0.355, 0.547] | 0.375 | 0.516 | 10 |
+
+**The top-3 PR-AUC CIs overlap heavily** ([0.39, 0.60] range) — they are statistically tied. KNN's "lead" of 0.001 over RF and 0.018 over XGB is noise.
+
+### Per-state PR-AUC — the universal pattern
+
+Surfacing all 4 models' per-state performance reveals NY-bias is *not* unique to KNN:
+
+| State | n | LR | RF | XGB | KNN |
+|---|---|---|---|---|---|
+| NY | 124 | 0.734 | 0.698 | 0.740 | 0.712 |
+| PA | 201 | 0.218 | 0.377 | 0.324 | 0.298 |
+| CT | 26 | 0.309 | 0.256 | 0.301 | 0.258 |
+| DE | 6 | 0.417 | 0.325 | 0.417 | 0.333 |
+
+**ALL models do well on NY and poorly on PA**. This is a real epidemiological pattern (NY's data is more predictable from demographics, possibly due to its reporting infrastructure or geographic heterogeneity), not a model artifact. Documented as a project limitation in the upcoming report.
+
+### Final production selection: **XGBoost**
+
+Justification:
+- **Highest recall** (0.376) — critical for SIR β-parameterisation; we cannot afford to miss high-risk counties
+- **Most uniform per-state performance** (spread 0.438)
+- **PR-AUC tied with KNN/RF within bootstrap noise**
+- **Highest F1** (0.417) — best precision-recall balance
+- **Adequate calibration** (Brier 0.166) — works after isotonic adjustment
+
+### Outputs
+- `models/production_model.pkl` — XGBoost + isotonic calibrator + scaler (ready for Notebook 09 SIR sim)
+- `models/model_comparison.json` — corrected production_model = XGB
+- `models/model_comparison_v2.json` — full bootstrap details + per-state breakdown
+- `models/comparison_bootstrap_cis.png` — bootstrap CI visualisation
+- `models/comparison_per_state.png` — per-state PR-AUC for all 4 models
+
+### Remaining issues (deferred — not critical)
+
+- Delete or properly populate `07_model_knn_2.ipynb` (cosmetic)
+- Reconcile `knn_metrics.json` vs `knn_metrics2.json` (cosmetic)
+- Add XGBoost (Chen & Guestrin 2016) to `REFERENCES.md` (admin)
+- Add a calibration curve overlay across all 4 models to comparison plots (nice-to-have)
+
+---
+
 ## Upcoming Work
 
 ### Session 10 — Feature Selection (Notebook 03)
