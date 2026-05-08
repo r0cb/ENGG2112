@@ -1,0 +1,142 @@
+{
+  "model": "KNN (CalibratedClassifierCV, isotonic)",
+  "dataset": "master_stacked.csv",
+  "n_observations": 357,
+  "n_features": 10,
+  "positive_class_rate": 0.2605042016806723,
+  "cv_strategy": "StratifiedGroupKFold(n_splits=5, groups=fips)",
+  "best_n_neighbors": 21,
+  "best_weights": "distance",
+  "best_metric": "manhattan",
+  "cv_metrics": {
+    "accuracy": 0.7703081232492998,
+    "precision": 0.6666666666666666,
+    "recall": 0.23655913978494625,
+    "f1": 0.3492063492063492,
+    "roc_auc": 0.6593963831867058,
+    "pr_auc": 0.47033715104540236,
+    "brier": 0.17629155830043114
+  },
+  "baseline_pr_auc": 0.2605042016806723,
+  "permutation_importance": [
+    {
+      "feature": "pct_foreign_born",
+      "importance_mean": 0.22597836779367234,
+      "ci_95_lower": 0.18619105044816486,
+      "ci_95_upper": 0.25862773475512213,
+      "stable_sign": true
+    },
+    {
+      "feature": "pop_density_per_sqmi",
+      "importance_mean": 0.011919988200836569,
+      "ci_95_lower": 0.006691278854083563,
+      "ci_95_upper": 0.020537542741851638,
+      "stable_sign": true
+    },
+    {
+      "feature": "avg_household_size",
+      "importance_mean": 0.33394709721912713,
+      "ci_95_lower": 0.28184301446427157,
+      "ci_95_upper": 0.3945916491183089,
+      "stable_sign": true
+    },
+    {
+      "feature": "public_transport_pct",
+      "importance_mean": 0.037471914985354286,
+      "ci_95_lower": 0.024976767516741542,
+      "ci_95_upper": 0.05368255338700467,
+      "stable_sign": true
+    },
+    {
+      "feature": "pct_elderly",
+      "importance_mean": 0.31281534377990416,
+      "ci_95_lower": 0.27113373979611666,
+      "ci_95_upper": 0.35600309813940284,
+      "stable_sign": true
+    },
+    {
+      "feature": "disease_FLU",
+      "importance_mean": 0.2935493378640649,
+      "ci_95_lower": 0.22254422081996156,
+      "ci_95_upper": 0.35211361930573515,
+      "stable_sign": true
+    },
+    {
+      "feature": "disease_RSV",
+      "importance_mean": 0.18139821929158614,
+      "ci_95_lower": 0.14450105817699044,
+      "ci_95_upper": 0.22340975154973144,
+      "stable_sign": true
+    },
+    {
+      "feature": "state_DE",
+      "importance_mean": 0.0002111405245026221,
+      "ci_95_lower": 0.0,
+      "ci_95_upper": 0.001046597621517239,
+      "stable_sign": false
+    },
+    {
+      "feature": "state_NY",
+      "importance_mean": 0.06748405155931636,
+      "ci_95_lower": 0.0428285659520727,
+      "ci_95_upper": 0.09428474107196229,
+      "stable_sign": true
+    },
+    {
+      "feature": "state_PA",
+      "importance_mean": 0.07987034359976397,
+      "ci_95_lower": 0.051454275947730346,
+      "ci_95_upper": 0.1106828021462072,
+      "stable_sign": true
+    }
+  ],
+  "per_disease_performance": {
+    "COVID": {
+      "n": 140.0,
+      "positives": 36.0,
+      "pr_auc": 0.593,
+      "roc_auc": 0.724,
+      "accuracy": 0.807
+    },
+    "FLU": {
+      "n": 141.0,
+      "positives": 37.0,
+      "pr_auc": 0.435,
+      "roc_auc": 0.626,
+      "accuracy": 0.766
+    },
+    "RSV": {
+      "n": 76.0,
+      "positives": 20.0,
+      "pr_auc": 0.328,
+      "roc_auc": 0.544,
+      "accuracy": 0.711
+    }
+  },
+  "per_state_performance": {
+    "CT": {
+      "n": 26.0,
+      "positives": 8.0,
+      "pr_auc": 0.249,
+      "accuracy": 0.615
+    },
+    "DE": {
+      "n": 6.0,
+      "positives": 2.0,
+      "pr_auc": 0.267,
+      "accuracy": 0.667
+    },
+    "NY": {
+      "n": 124.0,
+      "positives": 32.0,
+      "pr_auc": 0.664,
+      "accuracy": 0.887
+    },
+    "PA": {
+      "n": 201.0,
+      "positives": 51.0,
+      "pr_auc": 0.279,
+      "accuracy": 0.721
+    }
+  }
+}
