@@ -42,8 +42,8 @@
     }
   ],
   "production_model": "RF",
-  "production_pr_auc": 0.5079,
-  "lift_vs_baseline": 1.9497,
+  "production_pr_auc": 0.5064,
+  "lift_vs_baseline": 1.94,
   "charts": [
     "comparison_overall.png",
     "comparison_per_disease.png",
