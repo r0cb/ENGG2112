@@ -24,12 +24,12 @@
     },
     {
       "Model": "XGB",
-      "PR-AUC": 0.4905,
-      "ROC-AUC": 0.6653,
-      "Brier (cal)": 0.1665,
-      "F1": 0.4167,
-      "Recall": 0.3763,
-      "Lift vs baseline": 1.88
+      "PR-AUC": 0.5061,
+      "ROC-AUC": 0.6611,
+      "Brier (cal)": 0.1631,
+      "F1": 0.4246,
+      "Recall": 0.4086,
+      "Lift vs baseline": 1.94
     },
     {
       "Model": "LR",
@@ -41,13 +41,15 @@
       "Lift vs baseline": 1.71
     }
   ],
-  "production_model": "RF",
-  "production_pr_auc": 0.5064,
-  "lift_vs_baseline": 1.94,
+  "production_model": "XGB",
+  "production_pr_auc": 0.5061,
+  "lift_vs_baseline": 1.9428,
   "charts": [
     "comparison_overall.png",
     "comparison_per_disease.png",
     "comparison_importance_heatmap.png",
-    "comparison_radar.png"
-  ]
+    "comparison_radar.png",
+    "comparison_calibration.png"
+  ],
+  "selection_method": "composite_rank (PR-AUC + Recall + state-spread + Brier, see NB08 Section 9.4)"
 }

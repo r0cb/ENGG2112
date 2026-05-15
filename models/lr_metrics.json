@@ -21,81 +21,81 @@
   "coefficients": [
     {
       "feature": "pct_foreign_born",
-      "point_estimate": 0.13905050234196756,
-      "mean": 0.13810261253230774,
+      "point_estimate": 0.13905050234196759,
+      "mean": 0.13810261253230777,
       "ci_95_lower": 0.06799698471930242,
       "ci_95_upper": 0.2028543579923172,
       "stable_sign": true
     },
     {
-      "feature": "avg_household_size",
-      "point_estimate": 0.1887201009570016,
-      "mean": 0.1875318568008311,
-      "ci_95_lower": 0.09062099690264391,
-      "ci_95_upper": 0.2786616127521676,
-      "stable_sign": true
-    },
-    {
       "feature": "pop_density_per_sqmi",
       "point_estimate": 0.040371906926961104,
-      "mean": 0.03896796338114253,
-      "ci_95_lower": -0.040907084187461515,
-      "ci_95_upper": 0.10708593480457998,
+      "mean": 0.038967963381142605,
+      "ci_95_lower": -0.040907084187468294,
+      "ci_95_upper": 0.10708593480457997,
       "stable_sign": false
+    },
+    {
+      "feature": "avg_household_size",
+      "point_estimate": 0.1887201009570016,
+      "mean": 0.18753185680083134,
+      "ci_95_lower": 0.09062099690264391,
+      "ci_95_upper": 0.27866161275216755,
+      "stable_sign": true
     },
     {
       "feature": "public_transport_pct",
       "point_estimate": 0.09102751508195268,
-      "mean": 0.0901419940680905,
+      "mean": 0.09014199406809029,
       "ci_95_lower": 0.03508123069560108,
-      "ci_95_upper": 0.14606054266171026,
+      "ci_95_upper": 0.14606054266171023,
       "stable_sign": true
     },
     {
       "feature": "pct_elderly",
-      "point_estimate": -0.023092600297748993,
-      "mean": -0.0207946029704062,
-      "ci_95_lower": -0.12150691343182018,
-      "ci_95_upper": 0.07581539260014024,
+      "point_estimate": -0.023092600297748983,
+      "mean": -0.020794602970406858,
+      "ci_95_lower": -0.12150691343182017,
+      "ci_95_upper": 0.07581539260014022,
       "stable_sign": false
     },
     {
       "feature": "disease_FLU",
-      "point_estimate": -0.002676720971004348,
-      "mean": -0.004239801154532597,
-      "ci_95_lower": -0.09376809698196605,
-      "ci_95_upper": 0.07366813180299793,
+      "point_estimate": -0.0026767209710043555,
+      "mean": -0.004239801154532431,
+      "ci_95_lower": -0.0937680969819661,
+      "ci_95_upper": 0.07366813180299794,
       "stable_sign": false
     },
     {
       "feature": "disease_RSV",
-      "point_estimate": 0.017251060342728018,
-      "mean": 0.01775420890929906,
-      "ci_95_lower": -0.04823482537357673,
-      "ci_95_upper": 0.09068548134619327,
+      "point_estimate": 0.017251060342728004,
+      "mean": 0.01775420890929924,
+      "ci_95_lower": -0.04823482537357674,
+      "ci_95_upper": 0.09068548134619328,
       "stable_sign": false
     },
     {
       "feature": "state_DE",
       "point_estimate": 0.004222781424284128,
-      "mean": 0.004231042542343321,
-      "ci_95_lower": -0.020218083553220315,
-      "ci_95_upper": 0.033814679682422334,
+      "mean": 0.004231042542343312,
+      "ci_95_lower": -0.020218083553220325,
+      "ci_95_upper": 0.033814679682422376,
       "stable_sign": false
     },
     {
       "feature": "state_NY",
-      "point_estimate": -0.05029475612536336,
-      "mean": -0.05215110709652851,
-      "ci_95_lower": -0.11744002746196193,
-      "ci_95_upper": 0.019994881187414097,
+      "point_estimate": -0.05029475612536337,
+      "mean": -0.05215110709652831,
+      "ci_95_lower": -0.11744002746196198,
+      "ci_95_upper": 0.019994881187414066,
       "stable_sign": false
     },
     {
       "feature": "state_PA",
-      "point_estimate": 0.03888352529107419,
-      "mean": 0.040594733793627796,
-      "ci_95_lower": -0.028076359772248573,
+      "point_estimate": 0.038883525291074174,
+      "mean": 0.040594733793628296,
+      "ci_95_lower": -0.028076359772248552,
       "ci_95_upper": 0.10670270509555568,
       "stable_sign": false
     }

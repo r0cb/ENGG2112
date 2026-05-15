@@ -1,0 +1,68 @@
+{
+  "model": "RandomForestRegressor",
+  "target": "beta_obs (back-calculated from SIR final-size equation)",
+  "n_observations": 141,
+  "n_features": 8,
+  "features": [
+    "pct_foreign_born",
+    "pop_density_per_sqmi",
+    "avg_household_size",
+    "public_transport_pct",
+    "pct_elderly",
+    "state_DE",
+    "state_NY",
+    "state_PA"
+  ],
+  "cv_strategy": "GroupKFold(n_splits=5, groups=fips)",
+  "best_params": {
+    "max_depth": "None",
+    "max_features": "sqrt",
+    "min_samples_split": 5,
+    "n_estimators": 500
+  },
+  "cv_metrics": {
+    "r2": 0.5296176368649685,
+    "rmse": 0.0016425898584822623,
+    "mae": 0.001172672822352823,
+    "pearson_r": 0.7277558715259639
+  },
+  "beta_obs_stats": {
+    "mean": 0.14627346009175632,
+    "std": 0.0023949895472749677,
+    "min": 0.14336266529361472,
+    "max": 0.15713784255581156,
+    "median": 0.14582624967577798
+  },
+  "feature_importance": {
+    "gini": {
+      "pct_foreign_born": 0.214180363024551,
+      "avg_household_size": 0.17584715558254652,
+      "public_transport_pct": 0.1616316568888107,
+      "state_PA": 0.1322724275389554,
+      "pop_density_per_sqmi": 0.11168469638771954,
+      "pct_elderly": 0.10924459964566591,
+      "state_NY": 0.08877297555438245,
+      "state_DE": 0.006366125377368528
+    },
+    "permutation": {
+      "pct_foreign_born": 0.20548427735544011,
+      "state_PA": 0.15133967478485164,
+      "state_NY": 0.12410629862205841,
+      "public_transport_pct": 0.11707006827052163,
+      "avg_household_size": 0.10265069518779384,
+      "pct_elderly": 0.08181286261409394,
+      "pop_density_per_sqmi": 0.07391203200116184,
+      "state_DE": 0.00433416675537395
+    },
+    "permutation_std": {
+      "pct_foreign_born": 0.0249277321029824,
+      "pop_density_per_sqmi": 0.007389111176489673,
+      "avg_household_size": 0.013838401547898893,
+      "public_transport_pct": 0.015665293505818762,
+      "pct_elderly": 0.0074919632181729085,
+      "state_DE": 0.0005937945219223016,
+      "state_NY": 0.024408930662153765,
+      "state_PA": 0.02353417982514859
+    }
+  }
+}
