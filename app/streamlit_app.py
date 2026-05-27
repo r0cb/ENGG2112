@@ -187,20 +187,22 @@ def main() -> None:
             "strategy": strategy,
             "baseline_overall": baseline_overall,
         }
-        if strategy == ALLOCATION_TARGETED:
-            uniform_sim = _scenario_run(
-                controls["vax_boost_pp"],
-                controls["mobility"],
-                controls["horizon"],
-                ALLOCATION_UNIFORM,
-                baseline_overall,
-                baseline_per_state_tuple,
-            )
-            st.session_state["counterfactual_metrics"] = aggregate_metrics(
-                uniform_sim
-            )
-        else:
-            st.session_state.pop("counterfactual_metrics", None)
+        # Always compute the "other strategy" outcome so the strategy
+        # comparison callout has data regardless of which strategy was chosen.
+        other_strategy = (
+            ALLOCATION_UNIFORM
+            if strategy == ALLOCATION_TARGETED
+            else ALLOCATION_TARGETED
+        )
+        other_sim = _scenario_run(
+            controls["vax_boost_pp"],
+            controls["mobility"],
+            controls["horizon"],
+            other_strategy,
+            baseline_overall,
+            baseline_per_state_tuple,
+        )
+        st.session_state["counterfactual_metrics"] = aggregate_metrics(other_sim)
         st.session_state.pop("_just_reset", None)
 
     baseline_sim = _baseline_run(

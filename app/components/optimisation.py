@@ -24,7 +24,7 @@ def render_controls() -> dict:
     Layout:
       [ off-white container, sectioned off from the map above ]
         OPTIMISATION
-        brief one-line description
+        intro framing both cards around the same goal: minimise cases
         [ Strategy card ]   [ Auto-optimiser card ]
 
     The optimiser button only sets a session_state flag; the streamlit_app
@@ -36,15 +36,13 @@ def render_controls() -> dict:
         st.markdown(
             '<span class="modr-section-marker optimisation"></span>'
             '<div class="modr-section-box-eyebrow">Optimisation</div>'
-            '<div class="modr-section-box-title">Decide where the vaccination budget lands</div>'
+            '<div class="modr-section-box-title">Two questions the model can answer</div>'
             '<div class="modr-section-box-intro">'
-            "The <b>Additional vaccination budget</b> in the sidebar is a "
-            "fixed pool of vaccinations — a percentage of the regional "
-            "population. The two cards below decide <em>where</em> those "
-            "vaccinations go. Every dose is used: if a county would be "
-            "pushed above 100% coverage, the leftover is redistributed to "
-            "the next-highest-vulnerability counties until the budget is "
-            "exhausted."
+            "<b>Both controls below share the same goal: minimise total "
+            "cases.</b> They answer different questions about how to get there. "
+            "Card 01 asks: <em>given a fixed vaccination budget, how should "
+            "I distribute it?</em> Card 02 asks: <em>how small a budget can "
+            "I get away with and still keep the outbreak under control?</em>"
             "</div>",
             unsafe_allow_html=True,
         )
@@ -56,15 +54,16 @@ def render_controls() -> dict:
                 '<div class="modr-opt-card">'
                 '<div class="modr-opt-card-header">01 · ALLOCATION STRATEGY</div>'
                 '<div class="modr-opt-card-blurb">'
-                "Same fixed budget, distributed differently. "
-                "<b>Uniform</b> spreads the additional vaccinations evenly "
-                "across every county — every county sees the same "
-                "percentage-point increase. "
-                "<b>Targeted</b> routes the budget preferentially to "
-                "high-vulnerability counties (proportional to XGBoost "
-                "p_outbreak), with leftover from any county that hits 100% "
-                "coverage redistributed to the next-best candidates — no "
-                "vaccinations wasted."
+                "<b>Goal:</b> minimise cases at the current budget.<br><br>"
+                "Both options spend the <em>same fixed pool</em> of "
+                "vaccinations — they just distribute it differently. "
+                "<b>Uniform</b> is the simple baseline: every county gets "
+                "the same percentage-point increase, ignoring vulnerability. "
+                "<b>Targeted</b> is the ML-guided heuristic: it routes more "
+                "doses to high-vulnerability counties (proportional to "
+                "XGBoost p_outbreak), redistributing leftover from any county "
+                "that hits 100%. Which one actually wins on cases depends on "
+                "your baseline, budget, and mobility — toggle and compare."
                 "</div>",
                 unsafe_allow_html=True,
             )
@@ -91,14 +90,17 @@ def render_controls() -> dict:
         with col_optimiser:
             st.markdown(
                 '<div class="modr-opt-card">'
-                '<div class="modr-opt-card-header">02 · AUTO-OPTIMISE</div>'
+                '<div class="modr-opt-card-header">02 · BUDGET OPTIMISER</div>'
                 f'<div class="modr-opt-card-blurb">'
-                f"Find the <b>smallest vaccination budget</b> that keeps "
-                "the regional epidemic peak below "
+                "<b>Goal:</b> spend as few doses as possible while still "
+                "controlling the outbreak.<br><br>"
+                "Finds the <b>smallest vaccination budget</b> that keeps the "
+                "regional epidemic peak below "
                 f"<b>{OPTIMISER_PEAK_THRESHOLD_PCT:.2f}% of population</b>, "
                 "given the current mobility factor and allocation strategy. "
-                "Sweeps the budget in 2pp steps and picks the minimum that "
-                "clears the threshold."
+                "Sweeps the budget from 0 to 40pp in 2pp steps and picks the "
+                "minimum that clears the threshold — the leanest plan still "
+                "safe enough."
                 "</div>",
                 unsafe_allow_html=True,
             )
@@ -111,7 +113,7 @@ def render_controls() -> dict:
             st.markdown(
                 '<div class="modr-opt-card-effect">'
                 "Effect on the model: re-runs the SIR ~21 times across "
-                "vaccination values and writes the optimal value back to "
+                "vaccination values and writes the optimal budget back to "
                 "the sidebar slider."
                 "</div></div>",
                 unsafe_allow_html=True,
@@ -149,51 +151,80 @@ def render_strategy_gain(
     primary_metrics: dict,
     counterfactual_metrics: dict | None,
 ) -> None:
-    """If the user picked the targeted strategy, show how many more cases
-    that targeted allocation averted vs the uniform alternative at the same
-    total budget."""
-    if primary_strategy != ALLOCATION_TARGETED or counterfactual_metrics is None:
+    """Render a side-by-side comparison of the two allocation strategies at
+    the current scenario settings. Always shown when a scenario is active so
+    the user can see at a glance which strategy actually minimises cases for
+    this configuration.
+    """
+    if counterfactual_metrics is None:
         return
-    delta = (
-        counterfactual_metrics["new_infections"] - primary_metrics["new_infections"]
+    # Normalise: figure out which strategy is the "other" one
+    other_strategy = (
+        ALLOCATION_UNIFORM
+        if primary_strategy == ALLOCATION_TARGETED
+        else ALLOCATION_TARGETED
     )
+    primary_cases = primary_metrics["new_infections"]
+    other_cases = counterfactual_metrics["new_infections"]
+    primary_label = ALLOCATION_LABELS[primary_strategy].split(" ")[0]
+    other_label = ALLOCATION_LABELS[other_strategy].split(" ")[0]
+
+    delta = other_cases - primary_cases  # +ve means primary is better
+
     if abs(delta) < 1:
         st.markdown(
             '<div class="modr-opt-gain neutral">'
-            "Targeted vs uniform allocation: no measurable difference at this "
-            "budget. The allocation lever bites harder at moderate budgets."
+            "<b>Strategy comparison.</b> "
+            f"At this configuration, <b>{primary_label}</b> and "
+            f"<b>{other_label}</b> produce nearly identical case totals. "
+            "The allocation lever has more impact at moderate budgets and "
+            "with lower baseline vaccination — try changing those."
             "</div>",
             unsafe_allow_html=True,
         )
         return
+
     if delta > 0:
+        # Primary strategy is winning
         st.markdown(
             f'<div class="modr-opt-gain positive">'
-            f"<b>Optimisation gain.</b> Targeting averted "
-            f"<b>{int(round(delta)):,}</b> additional cases compared to "
-            "uniform allocation at the same total budget. Routing vaccines "
-            "to dense, high-contact counties first paid off because those "
-            "counties were the model's strongest predicted spreaders."
+            f"<b>Strategy comparison — {primary_label} wins.</b><br>"
+            f"At the current budget and baseline, your chosen "
+            f"<b>{primary_label}</b> allocation averts "
+            f"<b>{int(round(delta)):,}</b> more cases than the "
+            f"alternative <b>{other_label}</b> would have at the same total "
+            f"budget. Both strategies pursue case minimisation; this one is "
+            f"the better tool for the current configuration."
             "</div>",
             unsafe_allow_html=True,
         )
     else:
+        # Other strategy would have won — surface the insight
+        if primary_strategy == ALLOCATION_TARGETED:
+            insight = (
+                "Targeting concentrated doses on already-well-vaccinated "
+                "high-vulnerability counties, where the marginal vaccine has "
+                "diminishing returns. Uniform spread doses to less-vaccinated "
+                "counties, where each additional dose moved the population "
+                "closer to herd immunity. <br><br><b>Takeaway:</b> at high "
+                "baseline coverage, floor matters more than ceiling. Try "
+                "lowering the baseline slider — targeted should flip back "
+                "to winning."
+            )
+        else:
+            insight = (
+                "Targeting routed more doses to the densest, highest-contact "
+                "counties — exactly the ones the SIR is most sensitive to. "
+                "The ML signal is paying off here."
+            )
         st.markdown(
             f'<div class="modr-opt-gain negative">'
-            f"<b>Uniform beat targeted by {int(round(-delta)):,} cases at "
-            "this configuration.</b><br>"
-            "This is an honest epidemiological finding the model surfaces: "
-            "once baseline coverage is already high, the marginal vaccine "
-            "matters more in <em>less-vaccinated</em> counties than in the "
-            "highest-vulnerability ones. Spreading the dose pool evenly "
-            "lifts the least-protected counties above the herd-immunity "
-            "knee, while targeting concentrates doses where additional "
-            "coverage has diminishing returns. "
-            "<br><br>"
-            "<b>The takeaway:</b> what matters most for respiratory disease "
-            "control is <em>floor</em> coverage everywhere, not <em>ceiling</em> "
-            "coverage in the densest places. Try lowering the baseline "
-            "vaccination slider and see when targeting flips back to winning."
+            f"<b>Strategy comparison — {other_label} would have done better.</b>"
+            f"<br>"
+            f"Switching to <b>{other_label}</b> at the same total budget would "
+            f"avert <b>{int(round(-delta)):,}</b> more cases than your current "
+            f"<b>{primary_label}</b> choice. "
+            f"{insight}"
             "</div>",
             unsafe_allow_html=True,
         )
