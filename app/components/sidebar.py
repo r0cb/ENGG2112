@@ -1,4 +1,4 @@
-"""Sidebar: state filter, policy sliders, run/reset buttons."""
+"""Sidebar: state filter, policy sliders, vaccination baseline, run/reset."""
 
 from __future__ import annotations
 
@@ -10,8 +10,10 @@ from src.constants import (
     SIDEBAR_FOOTER,
     SLIDER_MOB,
     SLIDER_VAX,
+    SLIDER_VAX_BASELINE,
     STATE_NAMES,
     STATES,
+    VACCINATION_BASELINE_DEFAULT,
 )
 
 
@@ -40,15 +42,15 @@ def render() -> dict:
         if "vax_pp" not in st.session_state:
             st.session_state["vax_pp"] = SLIDER_VAX["default"]
         vax_boost_pp = st.slider(
-            "Vaccination budget (percentage points)",
+            "Additional vaccination budget (pp)",
             min_value=SLIDER_VAX["min"],
             max_value=SLIDER_VAX["max"],
             step=SLIDER_VAX["step"],
             key="vax_pp",
             help=(
-                "Added on top of the regional 58.9% baseline. The allocation "
-                "strategy in the Optimisation panel controls whether this "
-                "budget is spread uniformly or routed to high-risk counties."
+                "Added on top of the baseline below. The allocation strategy "
+                "in the Optimisation panel controls whether this budget is "
+                "spread uniformly or routed to high-vulnerability counties."
             ),
         )
 
@@ -66,6 +68,46 @@ def render() -> dict:
             options=HORIZON_OPTIONS,
             value=HORIZON_DEFAULT,
         )
+
+        st.markdown(
+            '<div class="modr-section-label" style="margin-top:1.25rem">'
+            "Baseline vaccination"
+            "</div>",
+            unsafe_allow_html=True,
+        )
+
+        baseline_overall = st.slider(
+            "Overall (% pop)",
+            min_value=SLIDER_VAX_BASELINE["min"],
+            max_value=SLIDER_VAX_BASELINE["max"],
+            value=SLIDER_VAX_BASELINE["default"],
+            step=SLIDER_VAX_BASELINE["step"],
+            key="baseline_overall",
+            help=(
+                "Sets the starting vaccinated fraction across all counties. "
+                "The Variant-C calibration used 59%; expose this so users can "
+                "explore lower- and higher-coverage worlds."
+            ),
+        )
+
+        per_state_baselines: dict[str, int] = {}
+        with st.expander("Per-state baselines (optional)", expanded=False):
+            st.caption(
+                "Each per-state value overrides the overall baseline for that "
+                "state. Leave at the overall value to use it."
+            )
+            for state in STATES:
+                key = f"baseline_{state}"
+                if key not in st.session_state:
+                    st.session_state[key] = baseline_overall
+                val = st.slider(
+                    f"{STATE_NAMES[state]} (% pop)",
+                    min_value=SLIDER_VAX_BASELINE["min"],
+                    max_value=SLIDER_VAX_BASELINE["max"],
+                    step=SLIDER_VAX_BASELINE["step"],
+                    key=key,
+                )
+                per_state_baselines[state] = val
 
         st.write("")
         run_clicked = st.button(
@@ -91,6 +133,8 @@ def render() -> dict:
         "vax_boost_pp": vax_boost_pp,
         "mobility": float(mobility),
         "horizon": int(horizon),
+        "baseline_overall": int(baseline_overall),
+        "per_state_baselines": per_state_baselines,
         "run_clicked": run_clicked,
         "reset_clicked": reset_clicked,
     }

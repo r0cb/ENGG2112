@@ -89,6 +89,29 @@ def load_model_artifact() -> dict:
         return pickle.load(f)
 
 
+def apply_baseline(
+    flu_df: pd.DataFrame,
+    overall_pct: float,
+    per_state_pct: dict | None = None,
+) -> pd.DataFrame:
+    """Return a copy of `flu_df` with the V0 column rewritten to reflect the
+    user's chosen baseline vaccination assumptions.
+
+    overall_pct sets a uniform baseline across all 141 counties. If
+    per_state_pct is provided, each state in the dict overrides the overall
+    value for its rows. Values are expected as percentages (0-100); they get
+    divided by 100 internally to match the fractional V0 the SIR uses.
+    """
+    out = flu_df.copy()
+    out["V0"] = float(overall_pct) / 100.0
+    if per_state_pct:
+        for state, pct in per_state_pct.items():
+            if pct is None:
+                continue
+            out.loc[out["state"] == state, "V0"] = float(pct) / 100.0
+    return out
+
+
 def baseline_seeded_fips(flu: pd.DataFrame) -> list:
     """Return the 3 fips that get I_init seeding (top 3 by p_outbreak)."""
     return flu.loc[flu["I_init"] > 0, "fips_str"].tolist()

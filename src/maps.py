@@ -17,6 +17,7 @@ from src.constants import (
     STATE_NAMES,
     STATES,
     TEXT,
+    VAX_COLOR_SEQUENCE,
 )
 
 
@@ -82,6 +83,81 @@ def _style_animation_controls(fig: go.Figure) -> go.Figure:
 def _ordered_states(selected_states: list) -> list:
     """Preserve canonical NY, PA, CT, DE order, filtered to selected."""
     return [s for s in STATES if s in selected_states]
+
+
+def build_single_state_vaccination_choropleth(
+    state_df: pd.DataFrame,
+    geojson: dict,
+    show_colorbar: bool = False,
+    height: int = 280,
+    range_color: tuple[float, float] | None = None,
+) -> go.Figure:
+    """Green-scale county map of effective vaccination coverage (V_eff)
+    after the user's chosen baseline + any allocation boost. Counties with
+    higher coverage shade darker green.
+
+    Expects state_df to carry a V_eff column in [0, 1] (fractional).
+    Pass `range_color` to share a color scale across multiple per-state
+    panels; defaults to a tight (min - 2pp, max + 2pp) auto-range based on
+    the panel's own data."""
+    if range_color is None:
+        v = state_df["V_eff"].values
+        if len(v):
+            range_color = (
+                max(0.0, float(v.min()) - 0.02),
+                min(1.0, float(v.max()) + 0.02),
+            )
+        else:
+            range_color = (0.0, 1.0)
+    fig = px.choropleth(
+        state_df,
+        geojson=geojson,
+        locations="fips_str",
+        color="V_eff",
+        color_continuous_scale=VAX_COLOR_SEQUENCE,
+        range_color=list(range_color),
+        hover_name="county",
+        hover_data={
+            "state": True,
+            "V0": ":.1%",
+            "V_eff": ":.1%",
+            "p_outbreak": ":.3f",
+            "fips_str": False,
+        },
+        labels={
+            "V_eff": "Coverage",
+            "V0": "Baseline",
+            "p_outbreak": "P(outbreak)",
+        },
+    )
+    fig.update_traces(marker_line_color=BG, marker_line_width=0.5)
+    fig.update_geos(fitbounds="locations", visible=False, bgcolor=BG)
+    fig.update_layout(
+        template="plotly_white",
+        font=dict(family=FONT_STACK, size=11, color=TEXT),
+        paper_bgcolor=BG,
+        plot_bgcolor=BG,
+        margin=dict(l=0, r=0, t=0, b=0),
+        height=height,
+        showlegend=False,
+    )
+    if show_colorbar:
+        fig.update_layout(
+            coloraxis_colorbar=dict(
+                title=dict(
+                    text="% vaccinated",
+                    font=dict(color=MUTED, family=FONT_STACK, size=10),
+                ),
+                thickness=8,
+                len=0.85,
+                tickfont=dict(size=10, color=MUTED, family=FONT_STACK),
+                outlinewidth=0,
+                tickformat=".0%",
+            ),
+        )
+    else:
+        fig.update_layout(coloraxis_showscale=False)
+    return fig
 
 
 def build_single_state_choropleth(

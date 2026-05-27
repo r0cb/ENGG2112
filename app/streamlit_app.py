@@ -9,6 +9,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
+import numpy as np
 import streamlit as st
 
 st.set_page_config(
@@ -30,6 +31,7 @@ from app.components import (  # noqa: E402
 )
 from src.constants import (  # noqa: E402
     ALLOCATION_DEFAULT,
+    ALLOCATION_LABELS,
     ALLOCATION_TARGETED,
     ALLOCATION_UNIFORM,
     APP_FOOTER,
@@ -37,6 +39,7 @@ from src.constants import (  # noqa: E402
     STATES,
 )
 from src.data_loader import (  # noqa: E402
+    apply_baseline,
     build_animation_frame,
     load_adjacency,
     load_flu_df,
@@ -61,10 +64,22 @@ def _inject_css() -> None:
     st.markdown(f"<style>{css}</style>", unsafe_allow_html=True)
 
 
+def _baseline_key(
+    baseline_overall: int, per_state_baselines: dict[str, int]
+) -> tuple:
+    """Hashable cache-key fragment for the user's chosen baseline V0."""
+    return baseline_overall, tuple(sorted(per_state_baselines.items()))
+
+
+def _flu_with_baseline(baseline_overall: int, per_state_baselines: dict) -> "pd.DataFrame":
+    return apply_baseline(load_flu_df(), baseline_overall, per_state_baselines)
+
+
 @st.cache_data(show_spinner=False)
-def _baseline_run(horizon: int) -> dict:
-    """Cached run at the default policy (V0 baseline, mobility 1.0)."""
-    flu = load_flu_df()
+def _baseline_run(
+    horizon: int, baseline_overall: int, baseline_per_state: tuple
+) -> dict:
+    flu = _flu_with_baseline(baseline_overall, dict(baseline_per_state))
     adj = load_adjacency()
     return run_sir(flu, adj, T=horizon, vax_boost=0.0, mobility_factor=1.0)
 
@@ -75,13 +90,10 @@ def _scenario_run(
     mobility_factor: float,
     horizon: int,
     strategy: str,
+    baseline_overall: int,
+    baseline_per_state: tuple,
 ) -> dict:
-    """Run SIR under the user's chosen policy + allocation strategy.
-
-    Cache key includes strategy so toggling Uniform↔Targeted reuses results
-    instead of recomputing.
-    """
-    flu = load_flu_df()
+    flu = _flu_with_baseline(baseline_overall, dict(baseline_per_state))
     adj = load_adjacency()
     total_boost = vax_boost_pp / 100.0
     vb = vax_boost_for_strategy(flu, total_boost, strategy)
@@ -92,13 +104,35 @@ def _scenario_run(
 
 @st.cache_data(show_spinner="Searching for the minimum vaccination budget...")
 def _optimise_min_vax(
-    mobility_factor: float, horizon: int, strategy: str, threshold_pct: float
+    mobility_factor: float,
+    horizon: int,
+    strategy: str,
+    threshold_pct: float,
+    baseline_overall: int,
+    baseline_per_state: tuple,
 ) -> dict:
-    flu = load_flu_df()
+    flu = _flu_with_baseline(baseline_overall, dict(baseline_per_state))
     adj = load_adjacency()
     return find_min_vax_for_threshold(
         flu, adj, horizon, mobility_factor, strategy, threshold_pct
     )
+
+
+def _add_v_eff_column(flu, vax_boost_pp, strategy):
+    """Annotate the flu DataFrame with V_eff (effective coverage per county)
+    for the chosen budget + strategy. Used by the Vaccination tab."""
+    flu = flu.copy()
+    total_boost = vax_boost_pp / 100.0
+    if total_boost <= 0:
+        flu["V_eff"] = flu["V0"].clip(0, 1)
+        return flu
+    if strategy == ALLOCATION_TARGETED:
+        boost = targeted_vax_boost(flu, total_boost)
+        boost_arr = boost.reindex(flu["fips_str"]).fillna(0).values
+    else:
+        boost_arr = np.full(len(flu), total_boost)
+    flu["V_eff"] = np.clip(flu["V0"].values + boost_arr, 0, 1)
+    return flu
 
 
 def main() -> None:
@@ -107,9 +141,21 @@ def main() -> None:
 
     controls = sidebar.render()
 
-    flu = load_flu_df()
+    baseline_key = _baseline_key(
+        controls["baseline_overall"], controls["per_state_baselines"]
+    )
+    baseline_overall = controls["baseline_overall"]
+    baseline_per_state_tuple = baseline_key[1]
+
+    flu = _flu_with_baseline(baseline_overall, controls["per_state_baselines"])
     geojson = load_geojson()
     selected = controls["states"] or STATES
+
+    strategy = st.session_state.get("strategy", ALLOCATION_DEFAULT)
+
+    # Annotate flu with V_eff for the Vaccination tab. Uses the current slider
+    # value so the coverage map updates instantly with the slider.
+    flu_with_v_eff = _add_v_eff_column(flu, controls["vax_boost_pp"], strategy)
 
     if controls["reset_clicked"]:
         for key in (
@@ -123,12 +169,13 @@ def main() -> None:
         st.session_state["_just_reset"] = True
 
     if controls["run_clicked"]:
-        strategy = st.session_state.get("strategy", ALLOCATION_DEFAULT)
         sim = _scenario_run(
             controls["vax_boost_pp"],
             controls["mobility"],
             controls["horizon"],
             strategy,
+            baseline_overall,
+            baseline_per_state_tuple,
         )
         st.session_state["sim_result"] = sim
         st.session_state["sim_metrics"] = aggregate_metrics(sim)
@@ -137,15 +184,16 @@ def main() -> None:
             "mobility": controls["mobility"],
             "horizon": controls["horizon"],
             "strategy": strategy,
+            "baseline_overall": baseline_overall,
         }
-        # Always also compute the uniform counterfactual at the same budget so
-        # the optimisation gain callout has something to compare against.
         if strategy == ALLOCATION_TARGETED:
             uniform_sim = _scenario_run(
                 controls["vax_boost_pp"],
                 controls["mobility"],
                 controls["horizon"],
                 ALLOCATION_UNIFORM,
+                baseline_overall,
+                baseline_per_state_tuple,
             )
             st.session_state["counterfactual_metrics"] = aggregate_metrics(
                 uniform_sim
@@ -154,7 +202,9 @@ def main() -> None:
             st.session_state.pop("counterfactual_metrics", None)
         st.session_state.pop("_just_reset", None)
 
-    baseline_sim = _baseline_run(controls["horizon"])
+    baseline_sim = _baseline_run(
+        controls["horizon"], baseline_overall, baseline_per_state_tuple
+    )
     baseline_metrics = aggregate_metrics(baseline_sim)
 
     has_scenario = "sim_result" in st.session_state
@@ -179,6 +229,8 @@ def main() -> None:
         baseline_metrics if has_scenario else None,
     )
 
+    strategy_label = ALLOCATION_LABELS.get(strategy, strategy).split(" ")[0].lower()
+
     if has_scenario:
         horizon = st.session_state["active_params"]["horizon"]
         stride = 4 if horizon <= 180 else (6 if horizon <= 270 else 8)
@@ -191,28 +243,45 @@ def main() -> None:
             horizon=horizon,
             frame_days=frame_days,
             focused_state=current_focus,
+            flu_for_vax=flu_with_v_eff,
+            vax_boost_pp=controls["vax_boost_pp"],
+            strategy_label=strategy_label,
         )
     else:
         map_panel.render_baseline(
-            flu, geojson, selected, focused_state=current_focus
+            flu_with_v_eff,
+            geojson,
+            selected,
+            focused_state=current_focus,
+            vax_boost_pp=controls["vax_boost_pp"],
+            strategy_label=strategy_label,
         )
         if st.session_state.pop("_just_reset", False):
             st.caption("Viewing baseline scenario (no intervention applied).")
 
     # === Optimisation panel ===
     opt_controls = optimisation.render_controls()
+    # The strategy radio lives in the optimisation panel, which renders AFTER
+    # the V_eff calculation and the map. If the user has just toggled the
+    # strategy, the rest of the page used the previous value. Trigger one
+    # extra rerun so everything sees the new strategy on the next pass.
+    if opt_controls["strategy"] != st.session_state.get(
+        "_committed_strategy", ALLOCATION_DEFAULT
+    ):
+        st.session_state["_committed_strategy"] = opt_controls["strategy"]
+        st.session_state["strategy"] = opt_controls["strategy"]
+        st.rerun()
     if opt_controls["optimise_clicked"]:
         opt_result = _optimise_min_vax(
             controls["mobility"],
             controls["horizon"],
             opt_controls["strategy"],
             OPTIMISER_PEAK_THRESHOLD_PCT,
+            baseline_overall,
+            baseline_per_state_tuple,
         )
         st.session_state["opt_result"] = opt_result
         if opt_result["optimal_pp"] is not None:
-            # Stage the override; the sidebar consumes it on the NEXT render,
-            # before instantiating the slider widget. Direct assignment after
-            # widget creation raises StreamlitAPIException.
             st.session_state["_vax_pp_pending"] = int(opt_result["optimal_pp"])
             st.rerun()
     optimisation.render_result(

@@ -32,6 +32,10 @@ STATE_CONFIDENCE = {
 
 SLIDER_VAX = {"min": 0, "max": 40, "step": 1, "default": 0}
 SLIDER_MOB = {"min": 0.0, "max": 1.0, "step": 0.05, "default": 1.0}
+# Default baseline vaccination % used in the Variant C SIR calibration. User can
+# override this overall, or per-state, from the sidebar.
+SLIDER_VAX_BASELINE = {"min": 0, "max": 100, "step": 1, "default": 59}
+VACCINATION_BASELINE_DEFAULT = 59
 HORIZON_OPTIONS = [90, 180, 270, 365]
 HORIZON_DEFAULT = 180
 
@@ -53,6 +57,7 @@ PR_AUC_OVERALL = 0.506
 PR_AUC_RANDOM = 0.261
 
 COLOR_SEQUENCE = "YlOrRd"
+VAX_COLOR_SEQUENCE = "Greens"
 BG = "#FFFFFF"
 SURFACE = "#FAFAFA"
 TEXT = "#1A1A1A"

@@ -55,12 +55,26 @@ spatial coupling along the county-adjacency graph:
 - Baseline reproduction number **R₀ = 1.3**, so **β_base ≈ 0.186**
 - Per-county β is scaled up to 50 % by the ML p_outbreak score
 - Inter-county coupling **α = 0.02**, scaled by the **Mobility factor** slider
-- Vaccination is set uniformly to the regional mean **58.9 %**; the **Vaccination
-  boost** slider adds percentage points on top of that
+- Vaccination is set by the **Baseline vaccination** slider (defaults to 59 %,
+  the regional mean used in the Variant-C calibration). The **Per-state
+  baselines** expander lets you override individual states. The **Additional
+  vaccination budget** slider adds percentage points on top of the baseline
 - Ten initial infections are seeded in the three counties with the highest
   predicted vulnerability; the epidemic spreads from there through adjacency
 - Simulation horizon: 90, 180, 270, or 365 days, evaluated at 0.5-day
   resolution and downsampled to 2-4 day frames for the animation
+
+### The map tabs
+
+- **Outbreak tab.** Red-orange choropleth. In the default view, shows
+  XGBoost-predicted P(outbreak) per county. After a scenario runs, shows
+  the animated % infectious over time, advancing through the simulation
+  horizon via the shared play button.
+- **Vaccination tab.** Green choropleth. Always static — shows the
+  effective vaccination coverage per county at t=0, which equals the
+  chosen baseline plus the additional budget allocated through the chosen
+  strategy. Use it to see *where* the targeted strategy actually concentrates
+  vaccinations.
 
 ### The Optimisation panel
 
