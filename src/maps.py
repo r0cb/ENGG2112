@@ -207,32 +207,25 @@ def build_baseline_choropleth(
     selected_states: list,
     focused_state: str | None = None,
 ) -> go.Figure:
-    """Static map of predicted outbreak vulnerability (p_outbreak).
+    """Big single-state choropleth used by the focused (one-state) view.
 
-    When `focused_state` is set OR only one state is selected, render a single
-    big choropleth zoomed to that state. Otherwise render a 2x2 small-multiples
-    grid with one panel per selected state.
+    The 2x2 grid view in map_panel.py builds its panels via
+    build_single_state_choropleth, so this function is only reached when one
+    state is selected (or focused). state_order is collapsed to a single state.
     """
     state_order = _ordered_states(selected_states)
     if focused_state and focused_state in state_order:
         state_order = [focused_state]
     df = flu[flu["state"].isin(state_order)].copy()
-    df["state"] = pd.Categorical(df["state"], categories=state_order, ordered=True)
-    df = df.sort_values("state")
 
-    single = len(state_order) == 1
-    facet_kwargs = (
-        {}
-        if single
-        else dict(facet_col="state", facet_col_wrap=2, facet_col_spacing=0.02)
-    )
-
-    px_kwargs = dict(
+    fig = px.choropleth(
+        df,
         geojson=geojson,
         locations="fips_str",
         color="p_outbreak",
         color_continuous_scale=COLOR_SEQUENCE,
         range_color=[0, 1],
+        scope="usa",
         hover_name="county",
         hover_data={
             "state": True,
@@ -242,11 +235,6 @@ def build_baseline_choropleth(
         },
         labels={"p_outbreak": "P(outbreak)", "V0": "Vaccinated"},
     )
-    # In single-map mode, scope='usa' adds context (state outlines). In facet
-    # mode we drop it so each geo can fitbounds to its own state cleanly.
-    if single:
-        px_kwargs["scope"] = "usa"
-    fig = px.choropleth(df, **px_kwargs, **facet_kwargs)
     fig.update_traces(marker_line_color=BG, marker_line_width=0.5)
     fig = _apply_scientific_theme(fig)
     fig.update_layout(
@@ -260,13 +248,8 @@ def build_baseline_choropleth(
             outlinewidth=0,
             tickformat=".2f",
         ),
+        height=560,
     )
-    if single:
-        fig.update_layout(height=560)
-    else:
-        n_rows = (len(state_order) + 1) // 2
-        fig.update_layout(height=340 * n_rows + 80)
-        fig = _format_state_facets(fig, state_order)
     return fig
 
 
@@ -276,33 +259,28 @@ def build_animated_choropleth(
     selected_states: list,
     focused_state: str | None = None,
 ) -> go.Figure:
-    """Animated SIR choropleth: % infectious per county over time.
+    """Big single-state animated SIR choropleth used by the focused view.
 
-    Same dual-mode contract as build_baseline_choropleth: single big map when
-    one state is focused/selected, else 2x2 small-multiples grid.
+    The 2x2 grid view in map_panel.py builds its panels via
+    build_single_state_animated_choropleth, so this function is only reached
+    when one state is selected (or focused).
     """
     state_order = _ordered_states(selected_states)
     if focused_state and focused_state in state_order:
         state_order = [focused_state]
     df = long_df[long_df["state"].isin(state_order)].copy()
-    df["state"] = pd.Categorical(df["state"], categories=state_order, ordered=True)
-    df = df.sort_values(["state", "day"])
+    df = df.sort_values("day")
     color_max = max(df["I_pct"].max(), 1e-6)
 
-    single = len(state_order) == 1
-    facet_kwargs = (
-        {}
-        if single
-        else dict(facet_col="state", facet_col_wrap=2, facet_col_spacing=0.02)
-    )
-
-    px_kwargs = dict(
+    fig = px.choropleth(
+        df,
         geojson=geojson,
         locations="fips",
         color="I_pct",
         animation_frame="day",
         color_continuous_scale=COLOR_SEQUENCE,
         range_color=[0, color_max],
+        scope="usa",
         hover_name="county",
         hover_data={
             "state": True,
@@ -318,9 +296,6 @@ def build_animated_choropleth(
             "p_outbreak": "P(outbreak)",
         },
     )
-    if single:
-        px_kwargs["scope"] = "usa"
-    fig = px.choropleth(df, **px_kwargs, **facet_kwargs)
     fig.update_traces(marker_line_color=BG, marker_line_width=0.4)
     fig = _apply_scientific_theme(fig)
     fig.update_layout(
@@ -334,13 +309,8 @@ def build_animated_choropleth(
             outlinewidth=0,
             tickformat=".3f",
         ),
+        height=560,
     )
-    if single:
-        fig.update_layout(height=560)
-    else:
-        n_rows = (len(state_order) + 1) // 2
-        fig.update_layout(height=340 * n_rows + 100)
-        fig = _format_state_facets(fig, state_order)
     fig = _style_animation_controls(fig)
     return fig
 
