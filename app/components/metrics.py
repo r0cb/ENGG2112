@@ -28,7 +28,7 @@ def _delta(value: float, kind: str, suffix: str = "") -> str:
     cls = kind
     return (
         f'<div class="delta {cls}">{arrow} '
-        f"{abs(value):.3g}{suffix} vs baseline</div>"
+        f"{abs(value):.2g}{suffix} vs baseline</div>"
     )
 
 
@@ -80,7 +80,7 @@ def render(metrics: dict, baseline_metrics: dict | None) -> None:
         [
             _card(
                 "Peak simultaneous infection",
-                f"{peak_pct:.3f}",
+                f"{peak_pct:.2g}",
                 unit="% pop",
                 delta_html=peak_delta_html,
             ),
@@ -92,7 +92,7 @@ def render(metrics: dict, baseline_metrics: dict | None) -> None:
             ),
             _card(
                 "New infections",
-                f"{new_inf_pct:.3f}",
+                f"{new_inf_pct:.2g}",
                 unit="% pop",
                 delta_html=(
                     f'<div class="delta neutral">{_format_int(new_inf)} people</div>'

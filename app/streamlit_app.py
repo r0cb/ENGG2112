@@ -78,6 +78,7 @@ def main() -> None:
     if controls["reset_clicked"]:
         for key in ("sim_result", "sim_metrics", "active_params"):
             st.session_state.pop(key, None)
+        st.session_state["_just_reset"] = True
 
     if controls["run_clicked"]:
         sim = _scenario_run(
@@ -90,6 +91,7 @@ def main() -> None:
             "mobility": controls["mobility"],
             "horizon": controls["horizon"],
         }
+        st.session_state.pop("_just_reset", None)
 
     baseline_sim = _baseline_run(controls["horizon"])
     baseline_metrics = aggregate_metrics(baseline_sim)
@@ -106,15 +108,21 @@ def main() -> None:
     )
 
     if has_scenario:
-        long_df = build_animation_frame(sim, flu, stride=4)
+        horizon = st.session_state["active_params"]["horizon"]
+        stride = 4 if horizon <= 180 else (6 if horizon <= 270 else 8)
+        frame_days = stride * 0.5
+        long_df = build_animation_frame(sim, flu, stride=stride)
         map_panel.render_animated(
             long_df,
             geojson,
             selected,
-            horizon=st.session_state["active_params"]["horizon"],
+            horizon=horizon,
+            frame_days=frame_days,
         )
     else:
         map_panel.render_baseline(flu, geojson, selected)
+        if st.session_state.pop("_just_reset", False):
+            st.caption("Viewing baseline scenario (no intervention applied).")
 
     with st.expander("State-level peak infectious breakdown", expanded=False):
         fig = build_state_summary_bars(sim, flu)

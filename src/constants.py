@@ -32,7 +32,7 @@ STATE_CONFIDENCE = {
 
 SLIDER_VAX = {"min": 0, "max": 40, "step": 1, "default": 0}
 SLIDER_MOB = {"min": 0.0, "max": 1.0, "step": 0.05, "default": 1.0}
-HORIZON_OPTIONS = [90, 120, 180]
+HORIZON_OPTIONS = [90, 180, 270, 365]
 HORIZON_DEFAULT = 180
 
 PR_AUC_OVERALL = 0.506
@@ -52,7 +52,7 @@ FONT_STACK = "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif
 APP_TITLE = "MODR — Respiratory Virus Vulnerability Explorer"
 APP_SUBTITLE = (
     "Counties of New York, Pennsylvania, Connecticut, Delaware. "
-    "Hypothetical scenarios, 180-day SIR simulation."
+    "Hypothetical scenarios, 90-to-365-day SIR simulation."
 )
 SIDEBAR_FOOTER = "ENGG2112 · 141 counties · XGBoost + SIR"
 APP_FOOTER = "ENGG2112 Project MODR · University of Sydney · 2026"

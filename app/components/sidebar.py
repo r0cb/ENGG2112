@@ -54,7 +54,7 @@ def render() -> dict:
             value=HORIZON_DEFAULT,
         )
 
-        st.markdown('<div style="height:0.5rem"></div>', unsafe_allow_html=True)
+        st.write("")
         run_clicked = st.button(
             "Run scenario", type="primary", use_container_width=True
         )
@@ -64,7 +64,7 @@ def render() -> dict:
 
         st.markdown(
             f"""
-            <div style="margin-top: 2rem; font-size: 0.7rem; color: #6B6B6B;
+            <div style="margin-top: 2rem; font-size: 0.8rem; color: #444444;
                         letter-spacing: 0.04em;">
                 {SIDEBAR_FOOTER}
             </div>
