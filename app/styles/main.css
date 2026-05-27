@@ -185,6 +185,68 @@ button[data-testid$="-pill_DE"]:disabled {
     border-bottom: 1px solid #E5E5E5;
 }
 
+/* === Optimisation panel === */
+.modr-optimisation-intro {
+    font-size: 0.85rem;
+    color: #6B6B6B;
+    line-height: 1.5;
+    margin-bottom: 1rem;
+    max-width: 760px;
+}
+.modr-opt-card {
+    border: 1px solid #E5E5E5;
+    border-radius: 2px;
+    background: #FFFFFF;
+    padding: 16px 18px;
+    margin-bottom: 0.5rem;
+}
+.modr-opt-card-header {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #6B6B6B;
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+}
+.modr-opt-card-blurb {
+    font-size: 0.82rem;
+    color: #1A1A1A;
+    line-height: 1.5;
+    margin-bottom: 0.75rem;
+}
+.modr-opt-card-blurb b {
+    font-weight: 500;
+    color: #1A1A1A;
+}
+.modr-opt-card-effect {
+    font-size: 0.72rem;
+    color: #6B6B6B;
+    line-height: 1.5;
+    border-top: 1px solid #F0F0F0;
+    padding-top: 0.6rem;
+    margin-top: 0.4rem;
+    font-style: italic;
+}
+.modr-opt-gain {
+    margin-top: 0.5rem;
+    padding: 12px 14px;
+    border-radius: 2px;
+    font-size: 0.85rem;
+    line-height: 1.5;
+    border: 1px solid #E5E5E5;
+}
+.modr-opt-gain.positive {
+    border-left: 3px solid #3A7D5C;
+    color: #1A1A1A;
+}
+.modr-opt-gain.negative {
+    border-left: 3px solid #B43A1E;
+    color: #1A1A1A;
+}
+.modr-opt-gain.neutral {
+    color: #6B6B6B;
+}
+
 .modr-footer {
     margin-top: 3rem;
     padding-top: 1rem;

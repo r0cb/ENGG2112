@@ -52,7 +52,7 @@ def run_sir(
     flu_df: pd.DataFrame,
     adj: dict,
     T: int = T_SIM,
-    vax_boost: float = 0.0,
+    vax_boost: float | np.ndarray | pd.Series = 0.0,
     mobility_factor: float = 1.0,
     alpha: float = ALPHA,
 ) -> dict:
@@ -63,7 +63,11 @@ def run_sir(
     flu_df : DataFrame with columns fips_str, N, V0, beta, gamma, I_init.
     adj : dict mapping fips_str -> list of neighbour fips_str (undirected).
     T : simulation horizon in days.
-    vax_boost : additional vaccination fraction on top of V0 (0..1).
+    vax_boost : additional vaccination fraction on top of V0 (0..1). Accepts a
+        scalar (uniform across counties) OR a pandas Series indexed by
+        fips_str OR a numpy array aligned with flu_df["fips_str"] ordering.
+        This is how the "targeted allocation" optimisation routes more
+        vaccine to high-vulnerability counties under the same total budget.
     mobility_factor : scales inter-county coupling alpha (0 = isolated, 1 = baseline).
 
     Returns
@@ -83,7 +87,17 @@ def run_sir(
     V0_arr = _df["V0"].reindex(fips_order).values
     I0_arr = _df["I_init"].reindex(fips_order).values
 
-    vax_eff = np.clip(V0_arr + vax_boost, 0, 1)
+    if isinstance(vax_boost, pd.Series):
+        vb = vax_boost.reindex(fips_order).fillna(0.0).values
+    elif np.isscalar(vax_boost):
+        vb = float(vax_boost)
+    else:
+        vb = np.asarray(vax_boost, dtype=float)
+        if vb.size != n:
+            raise ValueError(
+                f"vax_boost array length {vb.size} doesn't match {n} counties"
+            )
+    vax_eff = np.clip(V0_arr + vb, 0, 1)
     R_init = N_arr * vax_eff
     S_init = np.clip(N_arr - R_init - I0_arr, 0, None)
 

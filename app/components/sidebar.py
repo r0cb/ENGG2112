@@ -30,13 +30,26 @@ def render() -> dict:
             format_func=lambda s: STATE_NAMES[s],
         )
 
+        # The auto-optimiser writes its recommended budget to
+        # session_state["_vax_pp_pending"] before calling st.rerun(). We must
+        # apply it BEFORE the slider widget is instantiated, otherwise
+        # Streamlit raises StreamlitAPIException when assigning to a keyed
+        # widget's session_state after creation.
+        if "_vax_pp_pending" in st.session_state:
+            st.session_state["vax_pp"] = st.session_state.pop("_vax_pp_pending")
+        if "vax_pp" not in st.session_state:
+            st.session_state["vax_pp"] = SLIDER_VAX["default"]
         vax_boost_pp = st.slider(
-            "Vaccination boost (percentage points)",
+            "Vaccination budget (percentage points)",
             min_value=SLIDER_VAX["min"],
             max_value=SLIDER_VAX["max"],
-            value=SLIDER_VAX["default"],
             step=SLIDER_VAX["step"],
-            help="Added uniformly on top of the regional 58.9% baseline.",
+            key="vax_pp",
+            help=(
+                "Added on top of the regional 58.9% baseline. The allocation "
+                "strategy in the Optimisation panel controls whether this "
+                "budget is spread uniformly or routed to high-risk counties."
+            ),
         )
 
         mobility = st.slider(

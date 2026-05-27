@@ -25,9 +25,17 @@ from app.components import (  # noqa: E402
     map_panel,
     methodology,
     metrics as metrics_component,
+    optimisation,
     sidebar,
 )
-from src.constants import APP_FOOTER, STATES  # noqa: E402
+from src.constants import (  # noqa: E402
+    ALLOCATION_DEFAULT,
+    ALLOCATION_TARGETED,
+    ALLOCATION_UNIFORM,
+    APP_FOOTER,
+    OPTIMISER_PEAK_THRESHOLD_PCT,
+    STATES,
+)
 from src.data_loader import (  # noqa: E402
     build_animation_frame,
     load_adjacency,
@@ -36,6 +44,11 @@ from src.data_loader import (  # noqa: E402
     load_sir_baseline,
 )
 from src.maps import build_state_summary_bars  # noqa: E402
+from src.optimisation import (  # noqa: E402
+    find_min_vax_for_threshold,
+    targeted_vax_boost,
+    vax_boost_for_strategy,
+)
 from src.sir import aggregate_metrics, run_sir  # noqa: E402
 
 
@@ -57,11 +70,34 @@ def _baseline_run(horizon: int) -> dict:
 
 
 @st.cache_data(show_spinner="Running SIR simulation across 141 counties...")
-def _scenario_run(vax_boost: float, mobility_factor: float, horizon: int) -> dict:
+def _scenario_run(
+    vax_boost_pp: int,
+    mobility_factor: float,
+    horizon: int,
+    strategy: str,
+) -> dict:
+    """Run SIR under the user's chosen policy + allocation strategy.
+
+    Cache key includes strategy so toggling Uniform↔Targeted reuses results
+    instead of recomputing.
+    """
     flu = load_flu_df()
     adj = load_adjacency()
+    total_boost = vax_boost_pp / 100.0
+    vb = vax_boost_for_strategy(flu, total_boost, strategy)
     return run_sir(
-        flu, adj, T=horizon, vax_boost=vax_boost, mobility_factor=mobility_factor
+        flu, adj, T=horizon, vax_boost=vb, mobility_factor=mobility_factor
+    )
+
+
+@st.cache_data(show_spinner="Searching for the minimum vaccination budget...")
+def _optimise_min_vax(
+    mobility_factor: float, horizon: int, strategy: str, threshold_pct: float
+) -> dict:
+    flu = load_flu_df()
+    adj = load_adjacency()
+    return find_min_vax_for_threshold(
+        flu, adj, horizon, mobility_factor, strategy, threshold_pct
     )
 
 
@@ -76,13 +112,23 @@ def main() -> None:
     selected = controls["states"] or STATES
 
     if controls["reset_clicked"]:
-        for key in ("sim_result", "sim_metrics", "active_params"):
+        for key in (
+            "sim_result",
+            "sim_metrics",
+            "active_params",
+            "counterfactual_metrics",
+            "opt_result",
+        ):
             st.session_state.pop(key, None)
         st.session_state["_just_reset"] = True
 
     if controls["run_clicked"]:
+        strategy = st.session_state.get("strategy", ALLOCATION_DEFAULT)
         sim = _scenario_run(
-            controls["vax_boost"], controls["mobility"], controls["horizon"]
+            controls["vax_boost_pp"],
+            controls["mobility"],
+            controls["horizon"],
+            strategy,
         )
         st.session_state["sim_result"] = sim
         st.session_state["sim_metrics"] = aggregate_metrics(sim)
@@ -90,7 +136,22 @@ def main() -> None:
             "vax_boost_pp": controls["vax_boost_pp"],
             "mobility": controls["mobility"],
             "horizon": controls["horizon"],
+            "strategy": strategy,
         }
+        # Always also compute the uniform counterfactual at the same budget so
+        # the optimisation gain callout has something to compare against.
+        if strategy == ALLOCATION_TARGETED:
+            uniform_sim = _scenario_run(
+                controls["vax_boost_pp"],
+                controls["mobility"],
+                controls["horizon"],
+                ALLOCATION_UNIFORM,
+            )
+            st.session_state["counterfactual_metrics"] = aggregate_metrics(
+                uniform_sim
+            )
+        else:
+            st.session_state.pop("counterfactual_metrics", None)
         st.session_state.pop("_just_reset", None)
 
     baseline_sim = _baseline_run(controls["horizon"])
@@ -137,6 +198,33 @@ def main() -> None:
         )
         if st.session_state.pop("_just_reset", False):
             st.caption("Viewing baseline scenario (no intervention applied).")
+
+    # === Optimisation panel ===
+    opt_controls = optimisation.render_controls()
+    if opt_controls["optimise_clicked"]:
+        opt_result = _optimise_min_vax(
+            controls["mobility"],
+            controls["horizon"],
+            opt_controls["strategy"],
+            OPTIMISER_PEAK_THRESHOLD_PCT,
+        )
+        st.session_state["opt_result"] = opt_result
+        if opt_result["optimal_pp"] is not None:
+            # Stage the override; the sidebar consumes it on the NEXT render,
+            # before instantiating the slider widget. Direct assignment after
+            # widget creation raises StreamlitAPIException.
+            st.session_state["_vax_pp_pending"] = int(opt_result["optimal_pp"])
+            st.rerun()
+    optimisation.render_result(
+        st.session_state.get("opt_result"), opt_controls["strategy"]
+    )
+
+    if has_scenario:
+        optimisation.render_strategy_gain(
+            st.session_state["active_params"]["strategy"],
+            sim_metrics,
+            st.session_state.get("counterfactual_metrics"),
+        )
 
     with st.expander("State-level peak infectious breakdown", expanded=False):
         fig = build_state_summary_bars(sim, flu)

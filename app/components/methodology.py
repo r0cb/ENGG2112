@@ -62,6 +62,23 @@ spatial coupling along the county-adjacency graph:
 - Simulation horizon: 90, 180, 270, or 365 days, evaluated at 0.5-day
   resolution and downsampled to 2-4 day frames for the animation
 
+### The Optimisation panel
+
+The XGBoost score is treated as an *allocation signal*, not just a
+prediction:
+
+- **Allocation strategy** routes the same total vaccination budget either
+  uniformly or proportionally to each county's predicted vulnerability.
+  Under targeted allocation, the per-county additional vaccination is
+  `boost_c ∝ p_outbreak_c`, normalised so the population-weighted mean
+  matches the uniform alternative — same total people vaccinated, just
+  redistributed.
+- **Auto-optimiser** sweeps the vaccination budget in 2pp steps from 0 to
+  40pp and returns the smallest value whose regional peak infection stays
+  at or below 0.05% of population, given the current mobility factor and
+  allocation strategy. It then sets the sidebar slider so the user can
+  immediately play the optimal scenario.
+
 ### Known limitations
 
 1. **NY-bias.** The model is genuinely predictive only in New York. Predictions

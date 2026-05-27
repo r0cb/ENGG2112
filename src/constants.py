@@ -35,6 +35,20 @@ SLIDER_MOB = {"min": 0.0, "max": 1.0, "step": 0.05, "default": 1.0}
 HORIZON_OPTIONS = [90, 180, 270, 365]
 HORIZON_DEFAULT = 180
 
+ALLOCATION_UNIFORM = "uniform"
+ALLOCATION_TARGETED = "targeted"
+ALLOCATION_OPTIONS = [ALLOCATION_UNIFORM, ALLOCATION_TARGETED]
+ALLOCATION_DEFAULT = ALLOCATION_UNIFORM
+ALLOCATION_LABELS = {
+    ALLOCATION_UNIFORM: "Uniform",
+    ALLOCATION_TARGETED: "Targeted (proportional to vulnerability)",
+}
+
+# Auto-optimiser target: the peak infection threshold (as % of population) the
+# optimiser tries to keep the regional epidemic below while minimising
+# vaccination budget.
+OPTIMISER_PEAK_THRESHOLD_PCT = 0.05
+
 PR_AUC_OVERALL = 0.506
 PR_AUC_RANDOM = 0.261
 
