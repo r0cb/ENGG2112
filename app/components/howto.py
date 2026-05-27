@@ -17,32 +17,32 @@ _STEPS = [
         "Sidebar",
         "Pick which states to model, set the baseline vaccination rate "
         "(overall and per state), choose how connected counties are "
-        "(<b>mobility factor</b>) and how many days to simulate (<b>horizon</b>).",
+        "(<b>mobility factor</b>) and how many days to simulate "
+        "(<b>horizon</b>).",
     ),
     (
-        "Design the intervention",
-        "Sidebar + Optimisation panel",
-        "Add a vaccination budget — a fixed pool of doses expressed as a "
-        "percentage of the regional population. In the Optimisation panel, "
-        "pick whether to spread the doses evenly (<b>Uniform</b>) or route "
-        "them to the highest-vulnerability counties (<b>Targeted</b>).",
+        "Add a vaccination budget",
+        "Sidebar",
+        "Use the <b>Additional vaccination budget</b> slider to set a "
+        "fixed pool of doses, expressed as a percentage of regional "
+        "population. At +10pp, that's roughly 4 million doses across the "
+        "four states combined.",
+    ),
+    (
+        "Pick a distribution strategy",
+        "Vaccine distribution panel",
+        "Choose <b>Uniform</b> (every county gets the same percentage-point "
+        "boost) or <b>Vulnerability-weighted</b> (counties with higher "
+        "predicted outbreak risk get more, with overflow redistributed if "
+        "any county hits 100% coverage).",
     ),
     (
         "Read the outcome",
-        "Map tabs + metric cards",
+        "Map tabs + metric cards + comparison",
         "Click <b>Run scenario</b>, then watch the Outbreak tab animate "
-        "the SIR over time and switch to the Vaccination tab to see how "
-        "your doses were distributed. The four cards above the map "
-        "quantify peak infection, peak day, total cases, and cases averted "
-        "versus the no-intervention baseline.",
-    ),
-    (
-        "Let the model optimise for you",
-        "Auto-optimise",
-        "Click <b>Find minimum vaccination budget</b> to sweep the "
-        "intervention budget and report the smallest value that keeps "
-        "the regional peak below 0.05% of population — the model finds "
-        "the leanest plan that still works.",
+        "and switch to the Vaccination tab to see how your doses were "
+        "distributed. Below the map, a comparison callout tells you which "
+        "strategy would have minimised cases at these settings.",
     ),
 ]
 

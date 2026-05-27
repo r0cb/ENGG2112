@@ -8,7 +8,12 @@ header[data-testid="stHeader"] {
 header[data-testid="stHeader"] [data-testid="stToolbar"] { display: none; }
 header[data-testid="stHeader"] [data-testid="stDecoration"] { display: none; }
 header[data-testid="stHeader"] .stDeployButton { display: none; }
-header[data-testid="stHeader"] [data-testid="stStatusWidget"] { display: none; }
+/* Keep the status widget visible — it's Streamlit's built-in "script is
+   running" spinner. Without it, users see no feedback when reruns are
+   computing in the background (e.g. moving a slider). */
+header[data-testid="stHeader"] [data-testid="stStatusWidget"] {
+    color: #6B6B6B;
+}
 footer { visibility: hidden; }
 
 html, body, [class*="css"], .stApp {
@@ -274,6 +279,30 @@ button[data-testid$="-pill_DE"]:disabled {
     border-top: 1px solid #F0F0F0;
     padding-top: 0.6rem;
     margin-top: 0.4rem;
+    font-style: italic;
+}
+.modr-opt-card.is-active {
+    border-color: #1A1A1A;
+    box-shadow: 0 0 0 1px #1A1A1A inset;
+}
+.modr-opt-card-active-badge {
+    display: inline-block;
+    margin-left: 0.5rem;
+    padding: 2px 8px;
+    background: #1A1A1A;
+    color: #FFFFFF;
+    font-size: 0.6rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    border-radius: 999px;
+    font-weight: 500;
+    vertical-align: middle;
+}
+.modr-opt-footnote {
+    margin-top: 0.85rem;
+    font-size: 0.72rem;
+    color: #6B6B6B;
+    line-height: 1.5;
     font-style: italic;
 }
 .modr-opt-gain {

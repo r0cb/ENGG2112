@@ -34,7 +34,6 @@ from app.components import (  # noqa: E402
 from src.constants import (  # noqa: E402
     ALLOCATION_DEFAULT,
     ALLOCATION_LABELS,
-    ALLOCATION_OPTIMAL,
     ALLOCATION_TARGETED,
     ALLOCATION_UNIFORM,
     APP_FOOTER,
@@ -50,7 +49,6 @@ from src.data_loader import (  # noqa: E402
 )
 from src.maps import build_state_summary_bars  # noqa: E402
 from src.optimisation import (  # noqa: E402
-    find_optimal_allocation,
     targeted_vax_boost,
     vax_boost_for_strategy,
 )
@@ -94,45 +92,17 @@ def _scenario_run(
     strategy: str,
     baseline_overall: int,
     baseline_per_state: tuple,
-    optimal_beta: float | None = None,
 ) -> dict:
     flu = _flu_with_baseline(baseline_overall, dict(baseline_per_state))
     adj = load_adjacency()
     total_boost = vax_boost_pp / 100.0
-    vb = vax_boost_for_strategy(
-        flu, total_boost, strategy, optimal_beta=optimal_beta
-    )
+    vb = vax_boost_for_strategy(flu, total_boost, strategy)
     return run_sir(
         flu, adj, T=horizon, vax_boost=vb, mobility_factor=mobility_factor
     )
 
 
-@st.cache_data(
-    show_spinner="Searching the β family for the case-minimising allocation..."
-)
-def _optimise_allocation(
-    vax_boost_pp: int,
-    mobility_factor: float,
-    horizon: int,
-    baseline_overall: int,
-    baseline_per_state: tuple,
-) -> dict:
-    flu = _flu_with_baseline(baseline_overall, dict(baseline_per_state))
-    adj = load_adjacency()
-    total_boost = vax_boost_pp / 100.0
-    result = find_optimal_allocation(
-        flu, adj, horizon, mobility_factor, total_boost
-    )
-    # We don't keep the full sim/boost Series across reruns — they're heavy
-    # and Streamlit's cache_data prefers small returns.
-    return {
-        "best_beta": result["best_beta"],
-        "best_cases": result["best_cases"],
-        "sweep": result["sweep"],
-    }
-
-
-def _add_v_eff_column(flu, vax_boost_pp, strategy, optimal_beta=None):
+def _add_v_eff_column(flu, vax_boost_pp, strategy):
     """Annotate the flu DataFrame with V_eff (effective coverage per county)
     for the chosen budget + strategy. Used by the Vaccination tab."""
     flu = flu.copy()
@@ -140,9 +110,7 @@ def _add_v_eff_column(flu, vax_boost_pp, strategy, optimal_beta=None):
     if total_boost <= 0:
         flu["V_eff"] = flu["V0"].clip(0, 1)
         return flu
-    vb = vax_boost_for_strategy(
-        flu, total_boost, strategy, optimal_beta=optimal_beta
-    )
+    vb = vax_boost_for_strategy(flu, total_boost, strategy)
     if isinstance(vb, pd.Series):
         boost_arr = vb.reindex(flu["fips_str"]).fillna(0).values
     else:
@@ -168,15 +136,11 @@ def main() -> None:
     selected = controls["states"] or STATES
 
     strategy = st.session_state.get("strategy", ALLOCATION_DEFAULT)
-    cached_optimal_beta = st.session_state.get("optimal_beta")
 
     # Annotate flu with V_eff for the Vaccination tab. Uses the current slider
     # value so the coverage map updates instantly with the slider.
     flu_with_v_eff = _add_v_eff_column(
-        flu,
-        controls["vax_boost_pp"],
-        strategy,
-        optimal_beta=cached_optimal_beta,
+        flu, controls["vax_boost_pp"], strategy
     )
 
     if controls["reset_clicked"]:
@@ -185,12 +149,9 @@ def main() -> None:
             "sim_metrics",
             "active_params",
             "counterfactual_metrics",
-            "opt_result",
         ):
             st.session_state.pop(key, None)
         st.session_state["_just_reset"] = True
-
-    optimal_beta = st.session_state.get("optimal_beta")
 
     if controls["run_clicked"]:
         sim = _scenario_run(
@@ -200,7 +161,6 @@ def main() -> None:
             strategy,
             baseline_overall,
             baseline_per_state_tuple,
-            optimal_beta=optimal_beta,
         )
         st.session_state["sim_result"] = sim
         st.session_state["sim_metrics"] = aggregate_metrics(sim)
@@ -211,28 +171,24 @@ def main() -> None:
             "strategy": strategy,
             "baseline_overall": baseline_overall,
         }
-        # Compute the "other preset" outcome for the comparison callout, when
-        # the user is on a preset (Uniform or Targeted). When the user is on
-        # Optimal, the optimisation result panel already reports both deltas.
-        if strategy in (ALLOCATION_UNIFORM, ALLOCATION_TARGETED):
-            other_strategy = (
-                ALLOCATION_UNIFORM
-                if strategy == ALLOCATION_TARGETED
-                else ALLOCATION_TARGETED
-            )
-            other_sim = _scenario_run(
-                controls["vax_boost_pp"],
-                controls["mobility"],
-                controls["horizon"],
-                other_strategy,
-                baseline_overall,
-                baseline_per_state_tuple,
-            )
-            st.session_state["counterfactual_metrics"] = aggregate_metrics(
-                other_sim
-            )
-        else:
-            st.session_state.pop("counterfactual_metrics", None)
+        # Always compute the other strategy's outcome at the same budget so
+        # the comparison callout below can quantify the trade-off.
+        other_strategy = (
+            ALLOCATION_UNIFORM
+            if strategy == ALLOCATION_TARGETED
+            else ALLOCATION_TARGETED
+        )
+        other_sim = _scenario_run(
+            controls["vax_boost_pp"],
+            controls["mobility"],
+            controls["horizon"],
+            other_strategy,
+            baseline_overall,
+            baseline_per_state_tuple,
+        )
+        st.session_state["counterfactual_metrics"] = aggregate_metrics(
+            other_sim
+        )
         st.session_state.pop("_just_reset", None)
 
     baseline_sim = _baseline_run(
@@ -304,51 +260,6 @@ def main() -> None:
         st.session_state["_committed_strategy"] = opt_controls["strategy"]
         st.session_state["strategy"] = opt_controls["strategy"]
         st.rerun()
-    if opt_controls["optimise_clicked"]:
-        opt_result = _optimise_allocation(
-            controls["vax_boost_pp"],
-            controls["mobility"],
-            controls["horizon"],
-            baseline_overall,
-            baseline_per_state_tuple,
-        )
-        # Also score the two simple presets at the same budget so the
-        # result panel can quantify the gain vs both.
-        uniform_sim = _scenario_run(
-            controls["vax_boost_pp"],
-            controls["mobility"],
-            controls["horizon"],
-            ALLOCATION_UNIFORM,
-            baseline_overall,
-            baseline_per_state_tuple,
-        )
-        targeted_sim = _scenario_run(
-            controls["vax_boost_pp"],
-            controls["mobility"],
-            controls["horizon"],
-            ALLOCATION_TARGETED,
-            baseline_overall,
-            baseline_per_state_tuple,
-        )
-        opt_result = dict(opt_result)
-        opt_result["uniform_cases"] = float(
-            aggregate_metrics(uniform_sim)["new_infections"]
-        )
-        opt_result["targeted_cases"] = float(
-            aggregate_metrics(targeted_sim)["new_infections"]
-        )
-        st.session_state["opt_result"] = opt_result
-        st.session_state["optimal_beta"] = opt_result["best_beta"]
-        # Stage a strategy switch to Optimal. The optimisation panel consumes
-        # "_strategy_pending" at the top of its render(), before the radio
-        # widget mounts — direct assignment after the widget exists raises
-        # StreamlitAPIException.
-        st.session_state["strategy"] = ALLOCATION_OPTIMAL
-        st.session_state["_committed_strategy"] = ALLOCATION_OPTIMAL
-        st.session_state["_strategy_pending"] = ALLOCATION_OPTIMAL
-        st.rerun()
-    optimisation.render_result(st.session_state.get("opt_result"))
-
     if has_scenario:
         optimisation.render_strategy_gain(
             st.session_state["active_params"]["strategy"],

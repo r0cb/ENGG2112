@@ -40,30 +40,17 @@ HORIZON_OPTIONS = [90, 180, 270, 365]
 HORIZON_DEFAULT = 180
 
 ALLOCATION_UNIFORM = "uniform"
+# Legacy constant name — the user-visible label is "Vulnerability-weighted
+# distribution". Kept as ALLOCATION_TARGETED in code to avoid a sweeping
+# rename across files; treat it as the key for the vulnerability-proportional
+# allocation strategy.
 ALLOCATION_TARGETED = "targeted"
-ALLOCATION_OPTIMAL = "optimal"
-ALLOCATION_OPTIONS = [
-    ALLOCATION_UNIFORM,
-    ALLOCATION_TARGETED,
-    ALLOCATION_OPTIMAL,
-]
+ALLOCATION_OPTIONS = [ALLOCATION_UNIFORM, ALLOCATION_TARGETED]
 ALLOCATION_DEFAULT = ALLOCATION_UNIFORM
 ALLOCATION_LABELS = {
-    ALLOCATION_UNIFORM: "Uniform (β = 0)",
-    ALLOCATION_TARGETED: "Targeted (β = 1, proportional to vulnerability)",
-    ALLOCATION_OPTIMAL: "Optimal (β chosen to minimise cases)",
+    ALLOCATION_UNIFORM: "Uniform distribution",
+    ALLOCATION_TARGETED: "Vulnerability-weighted distribution",
 }
-
-# β sweep grid used by the case-minimising optimiser. Each value defines an
-# allocation where per-county boost is proportional to p_outbreak ** beta,
-# then water-filled if any county would exceed 100% coverage. β=0 collapses
-# to uniform; β=1 is the standard targeted strategy; higher values
-# concentrate the budget more aggressively.
-OPTIMISER_BETA_GRID = (0.0, 0.5, 1.0, 1.5, 2.0, 3.0, 5.0)
-
-# Legacy: peak threshold the old min-budget optimiser used. Retained because
-# the methodology copy references it; no longer surfaced in the UI.
-OPTIMISER_PEAK_THRESHOLD_PCT = 0.05
 
 PR_AUC_OVERALL = 0.506
 PR_AUC_RANDOM = 0.261
