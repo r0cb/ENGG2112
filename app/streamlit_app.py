@@ -23,6 +23,7 @@ st.set_page_config(
 from app.components import (  # noqa: E402
     confidence,
     header,
+    howto,
     map_panel,
     methodology,
     metrics as metrics_component,
@@ -294,6 +295,8 @@ def main() -> None:
             sim_metrics,
             st.session_state.get("counterfactual_metrics"),
         )
+
+    howto.render()
 
     with st.expander("State-level peak infectious breakdown", expanded=False):
         fig = build_state_summary_bars(sim, flu)

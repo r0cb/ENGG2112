@@ -22,93 +22,100 @@ def render_controls() -> dict:
     """Render the two-card optimisation panel and return the user's choices.
 
     Layout:
-      OPTIMISATION
-      brief one-line description
-      [ Strategy card ]   [ Auto-optimiser card ]
+      [ off-white container, sectioned off from the map above ]
+        OPTIMISATION
+        brief one-line description
+        [ Strategy card ]   [ Auto-optimiser card ]
 
     The optimiser button only sets a session_state flag; the streamlit_app
     main flow inspects that flag, runs the grid search (cached), and writes
     the result back to the vaccination slider.
     """
-    st.markdown(
-        '<div class="modr-section-label">Optimisation</div>'
-        '<div class="modr-optimisation-intro">'
-        "The <b>Additional vaccination budget</b> in the sidebar is a fixed "
-        "pool of vaccinations — a percentage of the regional population. "
-        "The controls below decide <em>where</em> those vaccinations go. "
-        "Every dose is used: if a county would be pushed above 100% coverage, "
-        "the leftover is redistributed to the next-highest-vulnerability "
-        "counties until the budget is exhausted."
-        "</div>",
-        unsafe_allow_html=True,
-    )
-
-    col_strategy, col_optimiser = st.columns(2, gap="medium")
-
-    with col_strategy:
+    panel = st.container(border=True)
+    with panel:
         st.markdown(
-            '<div class="modr-opt-card">'
-            '<div class="modr-opt-card-header">ALLOCATION STRATEGY</div>'
-            '<div class="modr-opt-card-blurb">'
-            "Same fixed budget, distributed differently. "
-            "<b>Uniform</b> spreads the additional vaccinations evenly across "
-            "every county — every county sees the same percentage-point "
-            "increase. "
-            "<b>Targeted</b> routes the budget preferentially to "
-            "high-vulnerability counties (proportional to XGBoost "
-            "p_outbreak), with leftover from any county that hits 100% "
-            "coverage redistributed to the next-best candidates — no "
-            "vaccinations wasted."
+            '<span class="modr-section-marker optimisation"></span>'
+            '<div class="modr-section-box-eyebrow">Optimisation</div>'
+            '<div class="modr-section-box-title">Decide where the vaccination budget lands</div>'
+            '<div class="modr-section-box-intro">'
+            "The <b>Additional vaccination budget</b> in the sidebar is a "
+            "fixed pool of vaccinations — a percentage of the regional "
+            "population. The two cards below decide <em>where</em> those "
+            "vaccinations go. Every dose is used: if a county would be "
+            "pushed above 100% coverage, the leftover is redistributed to "
+            "the next-highest-vulnerability counties until the budget is "
+            "exhausted."
             "</div>",
             unsafe_allow_html=True,
         )
-        strategy = st.radio(
-            "Allocation strategy",
-            options=ALLOCATION_OPTIONS,
-            index=ALLOCATION_OPTIONS.index(
-                st.session_state.get("strategy", ALLOCATION_DEFAULT)
-            ),
-            format_func=lambda s: ALLOCATION_LABELS[s],
-            label_visibility="collapsed",
-            key="strategy_radio",
-        )
-        st.session_state["strategy"] = strategy
-        st.markdown(
-            '<div class="modr-opt-card-effect">'
-            "Effect on the model: rescales the per-county <b>S<sub>0</sub></b> "
-            "compartment. The total population vaccinated stays constant; only "
-            "<em>where</em> those vaccines land changes."
-            "</div></div>",
-            unsafe_allow_html=True,
-        )
 
-    with col_optimiser:
-        st.markdown(
-            '<div class="modr-opt-card">'
-            '<div class="modr-opt-card-header">AUTO-OPTIMISE</div>'
-            f'<div class="modr-opt-card-blurb">'
-            f"Find the <b>smallest vaccination budget</b> that keeps the "
-            f"regional epidemic peak below "
-            f"<b>{OPTIMISER_PEAK_THRESHOLD_PCT:.2f}% of population</b>, given "
-            "the current mobility factor and allocation strategy. "
-            "Sweeps the budget in 2pp steps and picks the minimum that "
-            "clears the threshold."
-            "</div>",
-            unsafe_allow_html=True,
-        )
-        optimise_clicked = st.button(
-            "Find minimum vaccination budget",
-            key="optimise_btn",
-            type="primary",
-            use_container_width=True,
-        )
-        st.markdown(
-            '<div class="modr-opt-card-effect">'
-            "Effect on the model: re-runs the SIR ~21 times across vaccination "
-            "values and writes the optimal value back to the sidebar slider."
-            "</div></div>",
-            unsafe_allow_html=True,
-        )
+        col_strategy, col_optimiser = st.columns(2, gap="medium")
+
+        with col_strategy:
+            st.markdown(
+                '<div class="modr-opt-card">'
+                '<div class="modr-opt-card-header">01 · ALLOCATION STRATEGY</div>'
+                '<div class="modr-opt-card-blurb">'
+                "Same fixed budget, distributed differently. "
+                "<b>Uniform</b> spreads the additional vaccinations evenly "
+                "across every county — every county sees the same "
+                "percentage-point increase. "
+                "<b>Targeted</b> routes the budget preferentially to "
+                "high-vulnerability counties (proportional to XGBoost "
+                "p_outbreak), with leftover from any county that hits 100% "
+                "coverage redistributed to the next-best candidates — no "
+                "vaccinations wasted."
+                "</div>",
+                unsafe_allow_html=True,
+            )
+            strategy = st.radio(
+                "Allocation strategy",
+                options=ALLOCATION_OPTIONS,
+                index=ALLOCATION_OPTIONS.index(
+                    st.session_state.get("strategy", ALLOCATION_DEFAULT)
+                ),
+                format_func=lambda s: ALLOCATION_LABELS[s],
+                label_visibility="collapsed",
+                key="strategy_radio",
+            )
+            st.session_state["strategy"] = strategy
+            st.markdown(
+                '<div class="modr-opt-card-effect">'
+                "Effect on the model: rescales the per-county <b>S<sub>0</sub></b> "
+                "compartment. The total population vaccinated stays constant; only "
+                "<em>where</em> those vaccines land changes."
+                "</div></div>",
+                unsafe_allow_html=True,
+            )
+
+        with col_optimiser:
+            st.markdown(
+                '<div class="modr-opt-card">'
+                '<div class="modr-opt-card-header">02 · AUTO-OPTIMISE</div>'
+                f'<div class="modr-opt-card-blurb">'
+                f"Find the <b>smallest vaccination budget</b> that keeps "
+                "the regional epidemic peak below "
+                f"<b>{OPTIMISER_PEAK_THRESHOLD_PCT:.2f}% of population</b>, "
+                "given the current mobility factor and allocation strategy. "
+                "Sweeps the budget in 2pp steps and picks the minimum that "
+                "clears the threshold."
+                "</div>",
+                unsafe_allow_html=True,
+            )
+            optimise_clicked = st.button(
+                "Find minimum vaccination budget",
+                key="optimise_btn",
+                type="primary",
+                use_container_width=True,
+            )
+            st.markdown(
+                '<div class="modr-opt-card-effect">'
+                "Effect on the model: re-runs the SIR ~21 times across "
+                "vaccination values and writes the optimal value back to "
+                "the sidebar slider."
+                "</div></div>",
+                unsafe_allow_html=True,
+            )
 
     return {
         "strategy": strategy,
