@@ -17,8 +17,8 @@ from src.constants import STATE_NAMES, STATES
 from src.maps import (
     build_animated_choropleth,
     build_baseline_choropleth,
-    build_single_state_animated_choropleth,
     build_single_state_choropleth,
+    build_synced_grid_animated_choropleth,
 )
 
 
@@ -137,24 +137,13 @@ def render_animated(
         )
         st.plotly_chart(fig, use_container_width=True, config=_ANIMATED_CONFIG)
     else:
-        # 2x2 grid of small animated maps. Color scale is shared (computed once
-        # across the full long_df) so visual intensity is comparable.
+        # 2x2 grid driven by ONE shared timeline slider (all four states animate
+        # in tandem from a single play button). Built as a single plotly figure
+        # with make_subplots so we don't pay the cost of four separate
+        # animation widgets.
         scoped = long_df[long_df["state"].isin(state_order)]
-        color_max = max(scoped["I_pct"].max(), 1e-6)
-        rows = [state_order[i : i + 2] for i in range(0, len(state_order), 2)]
-        for row_idx, row in enumerate(rows):
-            cols = st.columns(len(row), gap="small")
-            for col_idx, (col, state) in enumerate(zip(cols, row)):
-                with col:
-                    _state_label(STATE_NAMES[state])
-                    state_df = scoped[scoped["state"] == state]
-                    show_cb = row_idx == 0 and col_idx == len(row) - 1
-                    fig = build_single_state_animated_choropleth(
-                        state_df, geojson, color_max, show_colorbar=show_cb
-                    )
-                    st.plotly_chart(
-                        fig, use_container_width=True, config=_ANIMATED_CONFIG
-                    )
+        fig = build_synced_grid_animated_choropleth(scoped, geojson, state_order)
+        st.plotly_chart(fig, use_container_width=True, config=_ANIMATED_CONFIG)
 
     _ct_warning(focused_state, selected_states)
     caption = _focus_caption(focused_state, selected_states)
@@ -165,7 +154,7 @@ def render_animated(
     )
     st.markdown(
         f'<p class="modr-caption">Each frame represents {frame_label} days. '
-        f"Horizon: {horizon} days. In grid view, each state animates independently — "
-        "press play on any panel; they're computed from the same simulation.</p>",
+        f"Horizon: {horizon} days. All panels animate in sync from the shared "
+        "play button below the grid.</p>",
         unsafe_allow_html=True,
     )

@@ -5,6 +5,7 @@ from __future__ import annotations
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 
 from src.constants import (
     ACCENT,
@@ -135,6 +136,195 @@ def build_single_state_choropleth(
         )
     else:
         fig.update_layout(coloraxis_showscale=False)
+    return fig
+
+
+def build_synced_grid_animated_choropleth(
+    long_df: pd.DataFrame,
+    geojson: dict,
+    state_order: list,
+) -> go.Figure:
+    """One figure containing a 2x2 (or 1x2 / 1x1) grid of per-state animated
+    choropleths driven by a single shared timeline slider.
+
+    Replaces the previous approach of rendering four independent
+    px.choropleth animations, which spawned four sliders and quadrupled the
+    Plotly DOM footprint. Here we use plotly.subplots.make_subplots and build
+    frames manually so all panels advance through Day t together.
+    """
+    color_max = max(long_df["I_pct"].max(), 1e-6)
+    days = sorted(long_df["day"].unique())
+
+    n = len(state_order)
+    n_cols = min(2, n)
+    n_rows = (n + 1) // 2
+
+    specs = [
+        [{"type": "choropleth"} for _ in range(n_cols)] for _ in range(n_rows)
+    ]
+    titles = [STATE_NAMES[s] for s in state_order]
+    while len(titles) < n_rows * n_cols:
+        titles.append("")
+
+    fig = make_subplots(
+        rows=n_rows,
+        cols=n_cols,
+        specs=specs,
+        subplot_titles=titles,
+        horizontal_spacing=0.06,
+        vertical_spacing=0.12,
+    )
+
+    state_dfs = {
+        s: long_df[long_df["state"] == s].set_index("day") for s in state_order
+    }
+
+    first_day = days[0]
+    for i, state in enumerate(state_order):
+        row = (i // n_cols) + 1
+        col = (i % n_cols) + 1
+        sdf = state_dfs[state]
+        try:
+            day0 = sdf.loc[[first_day]]
+        except KeyError:
+            day0 = sdf.iloc[:0]
+        fig.add_trace(
+            go.Choropleth(
+                geojson=geojson,
+                locations=day0["fips"].tolist(),
+                z=day0["I_pct"].tolist(),
+                colorscale=COLOR_SEQUENCE,
+                zmin=0,
+                zmax=color_max,
+                showscale=(i == (n_cols - 1)),  # only the first row's right cell
+                marker_line_color=BG,
+                marker_line_width=0.4,
+                customdata=day0[["county"]].values,
+                hovertemplate="<b>%{customdata[0]}</b><br>"
+                "I_pct: %{z:.4f}%<extra></extra>",
+                colorbar=dict(
+                    title=dict(
+                        text="% infectious",
+                        font=dict(color=MUTED, family=FONT_STACK, size=10),
+                    ),
+                    thickness=8,
+                    len=0.85,
+                    tickfont=dict(size=10, color=MUTED, family=FONT_STACK),
+                    outlinewidth=0,
+                    tickformat=".3f",
+                ),
+            ),
+            row=row,
+            col=col,
+        )
+
+    for i in range(n):
+        geo_idx = i + 1
+        geo_key = "geo" if geo_idx == 1 else f"geo{geo_idx}"
+        fig.update_layout(
+            **{geo_key: dict(fitbounds="locations", visible=False, bgcolor=BG)}
+        )
+
+    frames = []
+    for day in days:
+        frame_traces = []
+        for state in state_order:
+            sdf = state_dfs[state]
+            try:
+                d = sdf.loc[[day]]
+            except KeyError:
+                d = sdf.iloc[:0]
+            frame_traces.append(
+                go.Choropleth(
+                    locations=d["fips"].tolist(),
+                    z=d["I_pct"].tolist(),
+                    customdata=d[["county"]].values,
+                )
+            )
+        frames.append(go.Frame(data=frame_traces, name=f"{day:.0f}"))
+    fig.frames = frames
+
+    fig.update_layout(
+        height=300 * n_rows + 140,
+        margin=dict(l=20, r=20, t=40, b=80),
+        paper_bgcolor=BG,
+        plot_bgcolor=BG,
+        font=dict(family=FONT_STACK, size=12, color=TEXT),
+        showlegend=False,
+        updatemenus=[
+            dict(
+                type="buttons",
+                showactive=False,
+                buttons=[
+                    dict(
+                        label="▶",
+                        method="animate",
+                        args=[
+                            None,
+                            dict(
+                                frame=dict(duration=120, redraw=True),
+                                fromcurrent=True,
+                                transition=dict(duration=60),
+                            ),
+                        ],
+                    ),
+                    dict(
+                        label="■",
+                        method="animate",
+                        args=[
+                            [None],
+                            dict(frame=dict(duration=0), mode="immediate"),
+                        ],
+                    ),
+                ],
+                x=0.0,
+                y=-0.06,
+                xanchor="left",
+                yanchor="top",
+                bgcolor=BG,
+                bordercolor=TEXT,
+                borderwidth=1,
+                font=dict(color=TEXT, family=FONT_STACK, size=11),
+            )
+        ],
+        sliders=[
+            dict(
+                active=0,
+                steps=[
+                    dict(
+                        args=[
+                            [f"{day:.0f}"],
+                            dict(
+                                frame=dict(duration=0, redraw=True),
+                                mode="immediate",
+                            ),
+                        ],
+                        label=f"{day:.0f}",
+                        method="animate",
+                    )
+                    for day in days
+                ],
+                x=0.08,
+                len=0.9,
+                y=-0.06,
+                xanchor="left",
+                yanchor="top",
+                currentvalue=dict(
+                    prefix="Day ",
+                    font=dict(color=TEXT, family=FONT_STACK, size=12),
+                ),
+                bgcolor=BORDER,
+                bordercolor=BORDER,
+                activebgcolor=TEXT,
+                font=dict(color=MUTED, family=FONT_STACK, size=10),
+            )
+        ],
+    )
+
+    for ann in fig.layout.annotations:
+        ann.font = dict(color=TEXT, family=FONT_STACK, size=14)
+        ann.yshift = 4
+
     return fig
 
 
