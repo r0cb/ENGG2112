@@ -13,6 +13,8 @@ from src.constants import (
     COLOR_SEQUENCE,
     FONT_STACK,
     MUTED,
+    STATE_NAMES,
+    STATES,
     TEXT,
 )
 
@@ -76,13 +78,79 @@ def _style_animation_controls(fig: go.Figure) -> go.Figure:
     return fig
 
 
+def _ordered_states(selected_states: list) -> list:
+    """Preserve canonical NY, PA, CT, DE order, filtered to selected."""
+    return [s for s in STATES if s in selected_states]
+
+
+# Hand-tuned lon/lat bounding boxes per state. Padded ~0.3 deg so labels and
+# coastline don't clip. Used in 2x2 facet mode to override the USA-wide scope
+# that otherwise comes with px.choropleth.
+STATE_GEO_RANGES = {
+    "NY": dict(lonrange=[-80.0, -71.5], latrange=[40.3, 45.2]),
+    "PA": dict(lonrange=[-80.8, -74.4], latrange=[39.5, 42.5]),
+    "CT": dict(lonrange=[-74.0, -71.5], latrange=[40.8, 42.2]),
+    "DE": dict(lonrange=[-76.0, -74.8], latrange=[38.3, 40.0]),
+}
+
+
+def _format_state_facets(fig: go.Figure, state_order: list) -> go.Figure:
+    """Replace px's 'state=NY' annotations with the full state name + zoom each
+    geo subplot to its state's bounding box. Without this the choropleth would
+    render at USA scope (tiny state in a continent-wide canvas)."""
+    fig.for_each_annotation(
+        lambda a: a.update(
+            text=STATE_NAMES.get(a.text.split("=")[-1], a.text.split("=")[-1]),
+            font=dict(color=TEXT, family=FONT_STACK, size=13),
+            yshift=-4,
+        )
+    )
+    layout_updates = {}
+    for i, state in enumerate(state_order):
+        geo_key = "geo" if i == 0 else f"geo{i + 1}"
+        ranges = STATE_GEO_RANGES.get(state)
+        if not ranges:
+            continue
+        layout_updates[geo_key] = dict(
+            scope="north america",
+            fitbounds=False,
+            visible=False,
+            bgcolor=BG,
+            lonaxis=dict(range=ranges["lonrange"]),
+            lataxis=dict(range=ranges["latrange"]),
+            showcoastlines=False,
+            showland=False,
+            showcountries=False,
+        )
+    fig.update_layout(**layout_updates)
+    return fig
+
+
 def build_baseline_choropleth(
     flu: pd.DataFrame,
     geojson: dict,
     selected_states: list,
+    focused_state: str | None = None,
 ) -> go.Figure:
-    """Static map of predicted outbreak vulnerability (p_outbreak)."""
-    df = flu[flu["state"].isin(selected_states)].copy()
+    """Static map of predicted outbreak vulnerability (p_outbreak).
+
+    When `focused_state` is set OR only one state is selected, render a single
+    big choropleth zoomed to that state. Otherwise render a 2x2 small-multiples
+    grid with one panel per selected state.
+    """
+    state_order = _ordered_states(selected_states)
+    if focused_state and focused_state in state_order:
+        state_order = [focused_state]
+    df = flu[flu["state"].isin(state_order)].copy()
+    df["state"] = pd.Categorical(df["state"], categories=state_order, ordered=True)
+    df = df.sort_values("state")
+
+    single = len(state_order) == 1
+    facet_kwargs = (
+        {}
+        if single
+        else dict(facet_col="state", facet_col_wrap=2, facet_col_spacing=0.02)
+    )
 
     fig = px.choropleth(
         df,
@@ -100,6 +168,7 @@ def build_baseline_choropleth(
             "fips_str": False,
         },
         labels={"p_outbreak": "P(outbreak)", "V0": "Vaccinated"},
+        **facet_kwargs,
     )
     fig.update_traces(marker_line_color=BG, marker_line_width=0.5)
     fig = _apply_scientific_theme(fig)
@@ -115,7 +184,12 @@ def build_baseline_choropleth(
             tickformat=".2f",
         ),
     )
-    fig.update_layout(height=560)
+    if single:
+        fig.update_layout(height=560)
+    else:
+        n_rows = (len(state_order) + 1) // 2
+        fig.update_layout(height=340 * n_rows + 80)
+        fig = _format_state_facets(fig, state_order)
     return fig
 
 
@@ -123,10 +197,27 @@ def build_animated_choropleth(
     long_df: pd.DataFrame,
     geojson: dict,
     selected_states: list,
+    focused_state: str | None = None,
 ) -> go.Figure:
-    """Animated SIR choropleth: % infectious per county over time."""
-    df = long_df[long_df["state"].isin(selected_states)].copy()
+    """Animated SIR choropleth: % infectious per county over time.
+
+    Same dual-mode contract as build_baseline_choropleth: single big map when
+    one state is focused/selected, else 2x2 small-multiples grid.
+    """
+    state_order = _ordered_states(selected_states)
+    if focused_state and focused_state in state_order:
+        state_order = [focused_state]
+    df = long_df[long_df["state"].isin(state_order)].copy()
+    df["state"] = pd.Categorical(df["state"], categories=state_order, ordered=True)
+    df = df.sort_values(["state", "day"])
     color_max = max(df["I_pct"].max(), 1e-6)
+
+    single = len(state_order) == 1
+    facet_kwargs = (
+        {}
+        if single
+        else dict(facet_col="state", facet_col_wrap=2, facet_col_spacing=0.02)
+    )
 
     fig = px.choropleth(
         df,
@@ -151,6 +242,7 @@ def build_animated_choropleth(
             "vax_pct": "Vaccinated %",
             "p_outbreak": "P(outbreak)",
         },
+        **facet_kwargs,
     )
     fig.update_traces(marker_line_color=BG, marker_line_width=0.4)
     fig = _apply_scientific_theme(fig)
@@ -166,7 +258,12 @@ def build_animated_choropleth(
             tickformat=".3f",
         ),
     )
-    fig.update_layout(height=560)
+    if single:
+        fig.update_layout(height=560)
+    else:
+        n_rows = (len(state_order) + 1) // 2
+        fig.update_layout(height=340 * n_rows + 100)
+        fig = _format_state_facets(fig, state_order)
     fig = _style_animation_controls(fig)
     return fig
 

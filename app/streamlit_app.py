@@ -100,7 +100,18 @@ def main() -> None:
     sim = st.session_state.get("sim_result", baseline_sim)
     sim_metrics = st.session_state.get("sim_metrics", baseline_metrics)
 
-    confidence.render(selected)
+    current_focus = st.session_state.get("focused_state")
+    if current_focus and current_focus not in selected:
+        current_focus = None
+        st.session_state.pop("focused_state", None)
+
+    new_focus = confidence.render(selected, current_focus)
+    if new_focus != current_focus:
+        if new_focus is None:
+            st.session_state.pop("focused_state", None)
+        else:
+            st.session_state["focused_state"] = new_focus
+        st.rerun()
 
     metrics_component.render(
         sim_metrics,
@@ -118,9 +129,12 @@ def main() -> None:
             selected,
             horizon=horizon,
             frame_days=frame_days,
+            focused_state=current_focus,
         )
     else:
-        map_panel.render_baseline(flu, geojson, selected)
+        map_panel.render_baseline(
+            flu, geojson, selected, focused_state=current_focus
+        )
         if st.session_state.pop("_just_reset", False):
             st.caption("Viewing baseline scenario (no intervention applied).")
 

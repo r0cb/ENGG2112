@@ -1,12 +1,15 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
 
 #MainMenu { visibility: hidden; }
-header[data-testid="stHeader"] { display: none; }
+header[data-testid="stHeader"] {
+    background: transparent;
+    height: 2.25rem;
+}
+header[data-testid="stHeader"] [data-testid="stToolbar"] { display: none; }
+header[data-testid="stHeader"] [data-testid="stDecoration"] { display: none; }
+header[data-testid="stHeader"] .stDeployButton { display: none; }
+header[data-testid="stHeader"] [data-testid="stStatusWidget"] { display: none; }
 footer { visibility: hidden; }
-[data-testid="stToolbar"] { display: none; }
-[data-testid="stDecoration"] { display: none; }
-.stDeployButton { display: none; }
-[data-testid="stStatusWidget"] { display: none; }
 
 html, body, [class*="css"], .stApp {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -100,38 +103,69 @@ html, body, [class*="css"], .stApp {
 .modr-metric .delta.better { color: #3A7D5C; }
 .modr-metric .delta.neutral { color: #6B6B6B; }
 
+.modr-confidence-header { margin-bottom: 0.1rem; }
+.modr-confidence-hint {
+    font-size: 0.7rem;
+    color: #6B6B6B;
+    margin-bottom: 0.5rem;
+    line-height: 1.4;
+}
+
+/* Clickable per-state pills are real Streamlit buttons; restyle them to feel
+   like the previous static pill strip. The button keys are pill_NY, pill_PA,
+   etc. — but Streamlit doesn't expose the key in the DOM, so we target the
+   confidence-row container by virtue of being the first horizontal block of
+   small secondary/primary buttons. We use the more reliable approach of
+   styling all small-label sidebar-less buttons; below we override for the
+   bottom row run/reset which is already specifically styled. */
 .modr-confidence-row {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
     margin-bottom: 1.25rem;
 }
-.modr-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 6px 12px;
-    border: 1px solid #E5E5E5;
-    border-radius: 999px;
-    background: #FFFFFF;
-    font-size: 0.75rem;
-    color: #1A1A1A;
+[data-testid="stHorizontalBlock"] button[kind="secondary"][data-testid$="-pill_NY"],
+[data-testid="stHorizontalBlock"] button[kind="secondary"][data-testid$="-pill_PA"],
+[data-testid="stHorizontalBlock"] button[kind="secondary"][data-testid$="-pill_CT"],
+[data-testid="stHorizontalBlock"] button[kind="secondary"][data-testid$="-pill_DE"],
+[data-testid="stHorizontalBlock"] button[kind="primary"][data-testid$="-pill_NY"],
+[data-testid="stHorizontalBlock"] button[kind="primary"][data-testid$="-pill_PA"],
+[data-testid="stHorizontalBlock"] button[kind="primary"][data-testid$="-pill_CT"],
+[data-testid="stHorizontalBlock"] button[kind="primary"][data-testid$="-pill_DE"],
+button[data-testid$="-pill_reset"] {
+    border-radius: 999px !important;
+    padding: 6px 14px !important;
+    font-size: 0.72rem !important;
+    font-weight: 500 !important;
+    letter-spacing: 0.03em !important;
+    line-height: 1.25 !important;
+    min-height: 0 !important;
+    white-space: pre-wrap !important;
 }
-.modr-pill .state-name {
-    font-weight: 500;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
+button[data-testid$="-pill_NY"][kind="secondary"],
+button[data-testid$="-pill_PA"][kind="secondary"],
+button[data-testid$="-pill_CT"][kind="secondary"],
+button[data-testid$="-pill_DE"][kind="secondary"],
+button[data-testid$="-pill_reset"][kind="secondary"] {
+    background: #FFFFFF !important;
+    color: #1A1A1A !important;
+    border: 1px solid #E5E5E5 !important;
 }
-.modr-pill .state-dots {
-    color: #1A1A1A;
-    font-size: 0.85rem;
-    letter-spacing: 1px;
-    line-height: 1;
+button[data-testid$="-pill_NY"][kind="primary"],
+button[data-testid$="-pill_PA"][kind="primary"],
+button[data-testid$="-pill_CT"][kind="primary"],
+button[data-testid$="-pill_DE"][kind="primary"] {
+    background: #1A1A1A !important;
+    color: #FFFFFF !important;
+    border: 1px solid #1A1A1A !important;
 }
-.modr-pill .state-label {
-    color: #6B6B6B;
+button[data-testid$="-pill_NY"]:disabled,
+button[data-testid$="-pill_PA"]:disabled,
+button[data-testid$="-pill_CT"]:disabled,
+button[data-testid$="-pill_DE"]:disabled {
+    opacity: 0.3 !important;
+    cursor: not-allowed !important;
 }
-.modr-pill.dim { opacity: 0.4; }
 
 .modr-caption {
     font-size: 0.75rem;
@@ -217,3 +251,36 @@ h1, h2, h3, h4, h5, h6 {
 h1 { font-size: 1.9rem; }
 h2 { font-size: 1.25rem; }
 h3 { font-size: 1.05rem; }
+
+/* ===== Responsive (mobile + tablet) =====
+   Streamlit hides the sidebar toggle when collapsed on narrow viewports if the
+   chrome we strip is too aggressive. We re-show the header (transparent) so
+   the toggle remains reachable, and stack the metric grid for legibility. */
+
+@media (max-width: 900px) {
+    [data-testid="stMain"] > div { padding-top: 0.5rem; padding-bottom: 2rem; }
+    .modr-title { font-size: 1.45rem; }
+    .modr-subtitle { font-size: 0.85rem; }
+    .modr-metric-row {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+    }
+    .modr-metric { padding: 12px 14px; }
+    .modr-metric .value { font-size: 1.4rem; }
+    /* Confidence pills wrap to 2 per row on narrow screens. */
+    [data-testid="stHorizontalBlock"]:has(button[data-testid$="-pill_NY"]) {
+        flex-wrap: wrap !important;
+    }
+    [data-testid="stHorizontalBlock"]:has(button[data-testid$="-pill_NY"]) > div {
+        flex-basis: 48% !important;
+        min-width: 48% !important;
+    }
+}
+
+@media (max-width: 600px) {
+    .modr-title { font-size: 1.2rem; line-height: 1.2; }
+    .modr-metric-row { grid-template-columns: 1fr; }
+    .modr-metric .value { font-size: 1.55rem; }
+    /* Slim the sidebar so it doesn't crowd the main view when expanded. */
+    [data-testid="stSidebar"] { min-width: 75vw !important; }
+}
