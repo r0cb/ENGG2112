@@ -83,46 +83,121 @@ def _ordered_states(selected_states: list) -> list:
     return [s for s in STATES if s in selected_states]
 
 
-# Hand-tuned lon/lat bounding boxes per state. Padded ~0.3 deg so labels and
-# coastline don't clip. Used in 2x2 facet mode to override the USA-wide scope
-# that otherwise comes with px.choropleth.
-STATE_GEO_RANGES = {
-    "NY": dict(lonrange=[-80.0, -71.5], latrange=[40.3, 45.2]),
-    "PA": dict(lonrange=[-80.8, -74.4], latrange=[39.5, 42.5]),
-    "CT": dict(lonrange=[-74.0, -71.5], latrange=[40.8, 42.2]),
-    "DE": dict(lonrange=[-76.0, -74.8], latrange=[38.3, 40.0]),
-}
-
-
-def _format_state_facets(fig: go.Figure, state_order: list) -> go.Figure:
-    """Replace px's 'state=NY' annotations with the full state name + zoom each
-    geo subplot to its state's bounding box. Without this the choropleth would
-    render at USA scope (tiny state in a continent-wide canvas)."""
-    fig.for_each_annotation(
-        lambda a: a.update(
-            text=STATE_NAMES.get(a.text.split("=")[-1], a.text.split("=")[-1]),
-            font=dict(color=TEXT, family=FONT_STACK, size=13),
-            yshift=-4,
-        )
+def build_single_state_choropleth(
+    state_df: pd.DataFrame,
+    geojson: dict,
+    show_colorbar: bool = False,
+    height: int = 280,
+) -> go.Figure:
+    """Small choropleth focused on a single state for use inside a 2x2 grid
+    layout. Each chart is independent — Plotly fitbounds='locations' centres
+    the state in its own canvas, no facet arithmetic required."""
+    fig = px.choropleth(
+        state_df,
+        geojson=geojson,
+        locations="fips_str",
+        color="p_outbreak",
+        color_continuous_scale=COLOR_SEQUENCE,
+        range_color=[0, 1],
+        hover_name="county",
+        hover_data={
+            "state": True,
+            "V0": ":.1%",
+            "p_outbreak": ":.3f",
+            "fips_str": False,
+        },
+        labels={"p_outbreak": "P(outbreak)", "V0": "Vaccinated"},
     )
-    layout_updates = {}
-    for i, state in enumerate(state_order):
-        geo_key = "geo" if i == 0 else f"geo{i + 1}"
-        ranges = STATE_GEO_RANGES.get(state)
-        if not ranges:
-            continue
-        layout_updates[geo_key] = dict(
-            scope="north america",
-            fitbounds=False,
-            visible=False,
-            bgcolor=BG,
-            lonaxis=dict(range=ranges["lonrange"]),
-            lataxis=dict(range=ranges["latrange"]),
-            showcoastlines=False,
-            showland=False,
-            showcountries=False,
+    fig.update_traces(marker_line_color=BG, marker_line_width=0.5)
+    fig.update_geos(fitbounds="locations", visible=False, bgcolor=BG)
+    fig.update_layout(
+        template="plotly_white",
+        font=dict(family=FONT_STACK, size=11, color=TEXT),
+        paper_bgcolor=BG,
+        plot_bgcolor=BG,
+        margin=dict(l=0, r=0, t=0, b=0),
+        height=height,
+        showlegend=False,
+    )
+    if show_colorbar:
+        fig.update_layout(
+            coloraxis_colorbar=dict(
+                title=dict(
+                    text="P(outbreak)",
+                    font=dict(color=MUTED, family=FONT_STACK, size=10),
+                ),
+                thickness=8,
+                len=0.85,
+                tickfont=dict(size=10, color=MUTED, family=FONT_STACK),
+                outlinewidth=0,
+                tickformat=".2f",
+            ),
         )
-    fig.update_layout(**layout_updates)
+    else:
+        fig.update_layout(coloraxis_showscale=False)
+    return fig
+
+
+def build_single_state_animated_choropleth(
+    state_long_df: pd.DataFrame,
+    geojson: dict,
+    color_max: float,
+    show_colorbar: bool = False,
+    height: int = 280,
+) -> go.Figure:
+    """Animated single-state choropleth for the 2x2 scenario grid. Shares the
+    color_max across all four panels so the colour scale is comparable."""
+    fig = px.choropleth(
+        state_long_df,
+        geojson=geojson,
+        locations="fips",
+        color="I_pct",
+        animation_frame="day",
+        color_continuous_scale=COLOR_SEQUENCE,
+        range_color=[0, color_max],
+        hover_name="county",
+        hover_data={
+            "state": True,
+            "vax_pct": ":.1f",
+            "p_outbreak": ":.3f",
+            "I_pct": ":.4f",
+            "day": False,
+            "fips": False,
+        },
+        labels={
+            "I_pct": "% infectious",
+            "vax_pct": "Vaccinated %",
+            "p_outbreak": "P(outbreak)",
+        },
+    )
+    fig.update_traces(marker_line_color=BG, marker_line_width=0.4)
+    fig.update_geos(fitbounds="locations", visible=False, bgcolor=BG)
+    fig.update_layout(
+        template="plotly_white",
+        font=dict(family=FONT_STACK, size=11, color=TEXT),
+        paper_bgcolor=BG,
+        plot_bgcolor=BG,
+        margin=dict(l=0, r=0, t=0, b=30),
+        height=height + 40,
+        showlegend=False,
+    )
+    if show_colorbar:
+        fig.update_layout(
+            coloraxis_colorbar=dict(
+                title=dict(
+                    text="% infectious",
+                    font=dict(color=MUTED, family=FONT_STACK, size=10),
+                ),
+                thickness=8,
+                len=0.85,
+                tickfont=dict(size=10, color=MUTED, family=FONT_STACK),
+                outlinewidth=0,
+                tickformat=".3f",
+            ),
+        )
+    else:
+        fig.update_layout(coloraxis_showscale=False)
+    fig = _style_animation_controls(fig)
     return fig
 
 
@@ -152,14 +227,12 @@ def build_baseline_choropleth(
         else dict(facet_col="state", facet_col_wrap=2, facet_col_spacing=0.02)
     )
 
-    fig = px.choropleth(
-        df,
+    px_kwargs = dict(
         geojson=geojson,
         locations="fips_str",
         color="p_outbreak",
         color_continuous_scale=COLOR_SEQUENCE,
         range_color=[0, 1],
-        scope="usa",
         hover_name="county",
         hover_data={
             "state": True,
@@ -168,8 +241,12 @@ def build_baseline_choropleth(
             "fips_str": False,
         },
         labels={"p_outbreak": "P(outbreak)", "V0": "Vaccinated"},
-        **facet_kwargs,
     )
+    # In single-map mode, scope='usa' adds context (state outlines). In facet
+    # mode we drop it so each geo can fitbounds to its own state cleanly.
+    if single:
+        px_kwargs["scope"] = "usa"
+    fig = px.choropleth(df, **px_kwargs, **facet_kwargs)
     fig.update_traces(marker_line_color=BG, marker_line_width=0.5)
     fig = _apply_scientific_theme(fig)
     fig.update_layout(
@@ -219,15 +296,13 @@ def build_animated_choropleth(
         else dict(facet_col="state", facet_col_wrap=2, facet_col_spacing=0.02)
     )
 
-    fig = px.choropleth(
-        df,
+    px_kwargs = dict(
         geojson=geojson,
         locations="fips",
         color="I_pct",
         animation_frame="day",
         color_continuous_scale=COLOR_SEQUENCE,
         range_color=[0, color_max],
-        scope="usa",
         hover_name="county",
         hover_data={
             "state": True,
@@ -242,8 +317,10 @@ def build_animated_choropleth(
             "vax_pct": "Vaccinated %",
             "p_outbreak": "P(outbreak)",
         },
-        **facet_kwargs,
     )
+    if single:
+        px_kwargs["scope"] = "usa"
+    fig = px.choropleth(df, **px_kwargs, **facet_kwargs)
     fig.update_traces(marker_line_color=BG, marker_line_width=0.4)
     fig = _apply_scientific_theme(fig)
     fig.update_layout(
