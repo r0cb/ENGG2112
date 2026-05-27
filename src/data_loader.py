@@ -106,7 +106,10 @@ def apply_baseline(
     out["V0"] = float(overall_pct) / 100.0
     if per_state_pct:
         for state, pct in per_state_pct.items():
-            if pct is None:
+            if pct is None or pct == overall_pct:
+                # Skip identity overrides so a per-state slider that matches
+                # the overall doesn't accidentally pin the value when the user
+                # changes the overall slider afterwards.
                 continue
             out.loc[out["state"] == state, "V0"] = float(pct) / 100.0
     return out

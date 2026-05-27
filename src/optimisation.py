@@ -20,28 +20,63 @@ from src.sir import aggregate_metrics, run_sir
 
 
 def targeted_vax_boost(
-    flu_df: pd.DataFrame, total_boost: float
+    flu_df: pd.DataFrame, total_boost: float, cap: float = 1.0
 ) -> pd.Series:
-    """Distribute `total_boost` (in percentage-point fraction, e.g. 0.10 for
-    +10pp) across counties proportional to the XGBoost p_outbreak score, so
-    that the population-weighted mean boost equals the uniform total_boost.
+    """Distribute `total_boost` (a population-weighted percentage-point
+    fraction, e.g. 0.10 for +10pp) across counties proportionally to the
+    XGBoost p_outbreak score, *with redistribution* so we never waste
+    vaccinations on counties that would be pushed above the `cap` (default
+    100% coverage).
+
+    Conceptual model:
+    - There is a fixed budget of vaccinations measured in people:
+        budget = total_boost × Σ pop_c
+    - Each county's allocation is proportional to its p_outbreak weight.
+    - If a county's V_eff would exceed `cap`, it is capped at exactly `cap`
+      and the unused vaccines are redistributed to the still-eligible
+      counties, again proportionally to weight. Iterate until no county is
+      over the cap (typically 1-3 passes).
+    - Total people vaccinated stays equal to the uniform alternative — no
+      vaccines are lost to clipping.
 
     Returns a Series indexed by fips_str ready to pass to run_sir.
     """
     if total_boost <= 0:
         return pd.Series(0.0, index=flu_df["fips_str"].values)
+
     weights = flu_df["p_outbreak"].clip(lower=1e-6).values
     pop = flu_df["N"].values
-    # weighted mean of boost_c with weights = pop must equal total_boost
-    # boost_c proportional to weights[c]; scale so weighted mean matches.
-    raw = weights / weights.mean()
-    boost = total_boost * raw
-    # Population-weighted normalisation so the total vaccinated-person budget
-    # matches uniform: sum(boost_c * pop_c) == total_boost * sum(pop_c)
-    pop_weighted_mean = (boost * pop).sum() / pop.sum()
-    if pop_weighted_mean > 0:
-        boost = boost * (total_boost / pop_weighted_mean)
-    return pd.Series(boost, index=flu_df["fips_str"].values)
+    V0 = flu_df["V0"].values
+    n = len(flu_df)
+    fips = flu_df["fips_str"].values
+
+    target_people = total_boost * pop.sum()
+    boost = np.zeros(n)
+    eligible = np.ones(n, dtype=bool)
+
+    for _ in range(20):
+        if not eligible.any():
+            break
+        idx = np.where(eligible)[0]
+        w = weights[idx]
+        denom = float((w * pop[idx]).sum())
+        if denom <= 0 or target_people <= 0:
+            break
+        K = target_people / denom
+        proposed = K * w
+        V_eff_proposed = V0[idx] + proposed
+        over = V_eff_proposed > cap
+        if not over.any():
+            boost[idx] = proposed
+            target_people = 0.0
+            break
+        # Cap counties whose proposed allocation exceeds the ceiling
+        over_idx = idx[over]
+        boost[over_idx] = np.clip(cap - V0[over_idx], 0.0, None)
+        target_people -= float((boost[over_idx] * pop[over_idx]).sum())
+        eligible[over_idx] = False
+
+    return pd.Series(boost, index=fips)
 
 
 def vax_boost_for_strategy(

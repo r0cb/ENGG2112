@@ -144,17 +144,25 @@ def _render_vaccination_tab(
 
     _ct_warning(focused_state, selected_states)
     if vax_boost_pp > 0:
+        if strategy_label.startswith("targeted"):
+            extra = (
+                "the budget is routed to high-vulnerability counties first, "
+                "with overflow redistributed if any county would exceed 100%."
+            )
+        else:
+            extra = "the budget is added equally to every county."
         st.markdown(
-            f'<p class="modr-caption">Effective coverage = baseline V<sub>0</sub> + '
-            f"<b>{vax_boost_pp} pp</b> intervention, allocated <b>{strategy_label}</b>. "
-            "Darker green = higher vaccination.</p>",
+            f'<p class="modr-caption">Effective coverage = baseline V<sub>0</sub> + a '
+            f"<b>{vax_boost_pp} pp</b> intervention budget, allocated <b>{strategy_label}</b> — "
+            f"{extra} Darker green = higher coverage.</p>",
             unsafe_allow_html=True,
         )
     else:
         st.markdown(
-            '<p class="modr-caption">Showing baseline V<sub>0</sub>. Move the '
-            "Additional vaccination budget slider in the sidebar to see how "
-            "the chosen allocation strategy reshapes coverage.</p>",
+            '<p class="modr-caption">Showing baseline V<sub>0</sub> per county '
+            "(set by the Baseline vaccination slider in the sidebar). Add a "
+            "vaccination budget at the top of the sidebar to see how the "
+            "chosen allocation strategy reshapes coverage.</p>",
             unsafe_allow_html=True,
         )
 

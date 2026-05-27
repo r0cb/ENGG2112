@@ -48,9 +48,14 @@ def render() -> dict:
             step=SLIDER_VAX["step"],
             key="vax_pp",
             help=(
-                "Added on top of the baseline below. The allocation strategy "
-                "in the Optimisation panel controls whether this budget is "
-                "spread uniformly or routed to high-vulnerability counties."
+                "A fixed-size pool of vaccinations expressed as percentage "
+                "points of the regional population. Example: at +10 pp the "
+                "budget is 10% of all four states' population, "
+                "≈ 4 million doses. The Optimisation panel decides where they "
+                "land: Uniform spreads them across every county equally; "
+                "Targeted routes them to high-vulnerability counties first "
+                "and redistributes any leftover from counties that hit 100% "
+                "coverage — no vaccines are wasted."
             ),
         )
 
@@ -76,6 +81,26 @@ def render() -> dict:
             unsafe_allow_html=True,
         )
 
+        # Auto-sync per-state sliders to the overall slider. Without this, a
+        # per-state slider that the user hasn't touched still overrides the
+        # overall value (its default value gets written into session_state on
+        # first render and persists). We track the last *committed* overall
+        # and, when the overall changes, advance any per-state slider whose
+        # value matches the previous overall — i.e. the user hadn't deviated
+        # from it. Per-state values that diverge from the previous overall are
+        # treated as explicit overrides and left alone.
+        if "baseline_overall" in st.session_state:
+            current_overall = st.session_state["baseline_overall"]
+            last_overall = st.session_state.get(
+                "_baseline_overall_last", SLIDER_VAX_BASELINE["default"]
+            )
+            if current_overall != last_overall:
+                for state in STATES:
+                    pk = f"baseline_{state}"
+                    if st.session_state.get(pk, last_overall) == last_overall:
+                        st.session_state[pk] = current_overall
+                st.session_state["_baseline_overall_last"] = current_overall
+
         baseline_overall = st.slider(
             "Overall (% pop)",
             min_value=SLIDER_VAX_BASELINE["min"],
@@ -84,17 +109,22 @@ def render() -> dict:
             step=SLIDER_VAX_BASELINE["step"],
             key="baseline_overall",
             help=(
-                "Sets the starting vaccinated fraction across all counties. "
-                "The Variant-C calibration used 59%; expose this so users can "
-                "explore lower- and higher-coverage worlds."
+                "Sets the starting vaccinated fraction across all counties "
+                "BEFORE any additional intervention. The Variant-C calibration "
+                "used 59%; expose this so users can explore lower- and "
+                "higher-coverage worlds."
             ),
         )
+        # Initialise _last_overall on the very first run.
+        st.session_state.setdefault("_baseline_overall_last", baseline_overall)
 
         per_state_baselines: dict[str, int] = {}
         with st.expander("Per-state baselines (optional)", expanded=False):
             st.caption(
                 "Each per-state value overrides the overall baseline for that "
-                "state. Leave at the overall value to use it."
+                "state. Move only the per-state slider when you want a state "
+                "to diverge from the overall; touching the overall slider "
+                "re-syncs any untouched states to the new value."
             )
             for state in STATES:
                 key = f"baseline_{state}"

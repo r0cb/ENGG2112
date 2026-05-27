@@ -79,19 +79,37 @@ spatial coupling along the county-adjacency graph:
 ### The Optimisation panel
 
 The XGBoost score is treated as an *allocation signal*, not just a
-prediction:
+prediction. There are two levers:
 
-- **Allocation strategy** routes the same total vaccination budget either
-  uniformly or proportionally to each county's predicted vulnerability.
-  Under targeted allocation, the per-county additional vaccination is
-  `boost_c ∝ p_outbreak_c`, normalised so the population-weighted mean
-  matches the uniform alternative — same total people vaccinated, just
-  redistributed.
-- **Auto-optimiser** sweeps the vaccination budget in 2pp steps from 0 to
-  40pp and returns the smallest value whose regional peak infection stays
-  at or below 0.05% of population, given the current mobility factor and
-  allocation strategy. It then sets the sidebar slider so the user can
-  immediately play the optimal scenario.
+**Vaccination budget mechanics.** The `Additional vaccination budget` slider
+specifies a *fixed pool* of vaccinations, sized as a percentage of the
+regional population. At +X pp the budget is `X% × Σ pop_c` vaccinations
+in absolute terms — for the four-state region, +10pp ≈ 4 million doses.
+
+**Allocation strategy** decides where that pool goes:
+
+- **Uniform** — every county gets the same percentage-point increase in
+  coverage. Even spread, no targeting.
+- **Targeted** — the pool is routed proportional to p_outbreak, with
+  iterative redistribution: any county that would be pushed above 100%
+  coverage is capped at 100% and its leftover doses go back into the
+  pool, to be redistributed across the still-eligible counties at the
+  next round. Total people vaccinated stays equal to the uniform
+  alternative — no vaccines wasted.
+
+**Auto-optimiser** sweeps the vaccination budget in 2pp steps from 0 to
+40pp and returns the smallest value whose regional peak infection stays
+at or below 0.05% of population, given the current mobility factor and
+allocation strategy. It writes that value to the sidebar slider.
+
+**Honest finding: targeted is not always better.** At high baseline
+coverage, uniform allocation can outperform targeted. The intuition: the
+marginal vaccine matters more in a less-vaccinated county than in a
+highly-vaccinated one. Spreading the dose pool evenly lifts the
+least-protected counties above the herd-immunity knee, while targeting
+concentrates doses where additional coverage has diminishing returns.
+The model surfaces this trade-off when you toggle the strategy at
+non-trivial budgets.
 
 ### Known limitations
 

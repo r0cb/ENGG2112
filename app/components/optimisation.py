@@ -33,9 +33,12 @@ def render_controls() -> dict:
     st.markdown(
         '<div class="modr-section-label">Optimisation</div>'
         '<div class="modr-optimisation-intro">'
-        "MODR's vulnerability score is not just a prediction — it is an "
-        "allocation signal. The controls below turn that signal into "
-        "decisions about <em>how</em> intervention budget should be spent."
+        "The <b>Additional vaccination budget</b> in the sidebar is a fixed "
+        "pool of vaccinations — a percentage of the regional population. "
+        "The controls below decide <em>where</em> those vaccinations go. "
+        "Every dose is used: if a county would be pushed above 100% coverage, "
+        "the leftover is redistributed to the next-highest-vulnerability "
+        "counties until the budget is exhausted."
         "</div>",
         unsafe_allow_html=True,
     )
@@ -47,11 +50,15 @@ def render_controls() -> dict:
             '<div class="modr-opt-card">'
             '<div class="modr-opt-card-header">ALLOCATION STRATEGY</div>'
             '<div class="modr-opt-card-blurb">'
-            "Same total vaccination budget, distributed differently. "
-            "<b>Uniform</b> adds the boost equally to every county. "
-            "<b>Targeted</b> routes the same number of vaccinations "
-            "preferentially to high-vulnerability counties, proportional to "
-            "their XGBoost p_outbreak score."
+            "Same fixed budget, distributed differently. "
+            "<b>Uniform</b> spreads the additional vaccinations evenly across "
+            "every county — every county sees the same percentage-point "
+            "increase. "
+            "<b>Targeted</b> routes the budget preferentially to "
+            "high-vulnerability counties (proportional to XGBoost "
+            "p_outbreak), with leftover from any county that hits 100% "
+            "coverage redistributed to the next-best candidates — no "
+            "vaccinations wasted."
             "</div>",
             unsafe_allow_html=True,
         )
@@ -155,19 +162,31 @@ def render_strategy_gain(
     if delta > 0:
         st.markdown(
             f'<div class="modr-opt-gain positive">'
-            f"<b>Optimisation gain.</b> Targeted allocation averted "
+            f"<b>Optimisation gain.</b> Targeting averted "
             f"<b>{int(round(delta)):,}</b> additional cases compared to "
-            "uniform allocation at the same total vaccination budget."
+            "uniform allocation at the same total budget. Routing vaccines "
+            "to dense, high-contact counties first paid off because those "
+            "counties were the model's strongest predicted spreaders."
             "</div>",
             unsafe_allow_html=True,
         )
     else:
         st.markdown(
             f'<div class="modr-opt-gain negative">'
-            f"At this budget, the targeted strategy added "
-            f"<b>{int(round(-delta)):,}</b> cases versus uniform — likely a "
-            "boundary effect where the targeted vaccinations crowd already-"
-            "well-vaccinated counties. Try a lower budget."
+            f"<b>Uniform beat targeted by {int(round(-delta)):,} cases at "
+            "this configuration.</b><br>"
+            "This is an honest epidemiological finding the model surfaces: "
+            "once baseline coverage is already high, the marginal vaccine "
+            "matters more in <em>less-vaccinated</em> counties than in the "
+            "highest-vulnerability ones. Spreading the dose pool evenly "
+            "lifts the least-protected counties above the herd-immunity "
+            "knee, while targeting concentrates doses where additional "
+            "coverage has diminishing returns. "
+            "<br><br>"
+            "<b>The takeaway:</b> what matters most for respiratory disease "
+            "control is <em>floor</em> coverage everywhere, not <em>ceiling</em> "
+            "coverage in the densest places. Try lowering the baseline "
+            "vaccination slider and see when targeting flips back to winning."
             "</div>",
             unsafe_allow_html=True,
         )
