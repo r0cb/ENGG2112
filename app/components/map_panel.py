@@ -96,21 +96,14 @@ def _render_vaccination_tab(
     if "V_eff" not in df.columns:
         df["V_eff"] = df["V0"]
 
-    # Shared range across all visible panels so the user can compare counties
-    # across states. Tight padding keeps the variation visible — without this
-    # the 0-100% range squashes everything into the dark-green band when the
-    # user has a 50%+ baseline.
-    v = df["V_eff"].values
-    if len(v) and v.max() > v.min():
-        range_color = (
-            max(0.0, float(v.min()) - 0.02),
-            min(1.0, float(v.max()) + 0.02),
-        )
-    else:
-        # All counties at the same coverage (no targeting, no boost variation):
-        # still show some context by spanning ±10pp around the value.
-        val = float(v.mean()) if len(v) else 0.5
-        range_color = (max(0.0, val - 0.1), min(1.0, val + 0.1))
+    # Use an absolute 0%-100% colour scale so the map's appearance carries
+    # the same meaning across strategies. Autoscaling per render (which we
+    # tried previously) makes toggling strategies look more visually similar
+    # than they actually are — auto-shrinking the range hides the fact that
+    # the Vulnerability-weighted distribution spreads V_eff values over a
+    # wider band than Uniform does. Fixed scale = the same shade of green
+    # always means the same coverage percentage.
+    range_color = (0.0, 1.0)
 
     if len(target_states) <= 1:
         # one big map
