@@ -145,17 +145,13 @@ def render() -> dict:
                 per_state_baselines[state] = val
 
         # === Outbreak origin ===
-        # Consume any pending click-to-seed before the multiselect mounts, so
-        # we don't get StreamlitAPIException when assigning to a keyed widget
-        # after it's been created.
-        pending_seed = st.session_state.pop("_seed_pending", None)
-        if pending_seed:
-            current = list(st.session_state.get("seed_counties", []))
-            for f in pending_seed:
-                if f not in current:
-                    current.append(f)
-            st.session_state["seed_counties"] = current
-            st.session_state["seed_mode"] = SEED_MODE_CHOOSE
+        # Click-to-seed in map_panel writes directly to session_state
+        # ['seed_counties']. The radio widget below has key='seed_mode' so we
+        # cannot set its session_state after the widget mounts — use a pending
+        # hand-off consumed here, before the radio is created.
+        pending_mode = st.session_state.pop("_seed_mode_pending", None)
+        if pending_mode in (SEED_MODE_DEFAULT, SEED_MODE_CHOOSE):
+            st.session_state["seed_mode"] = pending_mode
 
         st.markdown(
             '<div class="modr-section-label" style="margin-top:1.25rem">'

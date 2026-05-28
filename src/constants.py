@@ -57,6 +57,23 @@ PR_AUC_RANDOM = 0.261
 
 COLOR_SEQUENCE = "YlOrRd"
 VAX_COLOR_SEQUENCE = "Greens"
+
+# Custom non-linear colour stops for the animated outbreak map. Stops are
+# placed densely at the low end so a small initial seed (10 cases in ~1M
+# population ≈ 0.001 %) is still visibly coloured at Day 0 — the standard
+# linear YlOrRd colourmap shows that as essentially white. Each pair is
+# [normalised-position-in-0-1, hex-colour].
+OUTBREAK_LOG_COLOR_STOPS = [
+    [0.0, "#FFFFCC"],
+    [0.005, "#FFEDA0"],
+    [0.02, "#FED976"],
+    [0.05, "#FEB24C"],
+    [0.12, "#FD8D3C"],
+    [0.25, "#FC4E2A"],
+    [0.5, "#E31A1C"],
+    [0.75, "#BD0026"],
+    [1.0, "#800026"],
+]
 BG = "#FFFFFF"
 SURFACE = "#FAFAFA"
 TEXT = "#1A1A1A"

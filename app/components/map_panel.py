@@ -161,24 +161,53 @@ def _render_vaccination_tab(
 
 
 def _capture_click_seed(event, source_key: str) -> None:
-    """If the user clicked a county on a Plotly choropleth, stage the fips
-    in session_state for the sidebar to consume on the next render."""
-    if not event or not getattr(event, "selection", None):
+    """If the user clicked a county on a Plotly choropleth, append the fips
+    directly to st.session_state['seed_counties'] and stage a mode-switch.
+
+    seed_counties has no Streamlit widget keyed to it any more (the
+    multiselect was removed), so we can write to it directly without the
+    StreamlitAPIException. seed_mode IS a widget key (the sidebar radio),
+    so we use a pending hand-off consumed by the sidebar BEFORE the radio
+    mounts on the next render.
+    """
+    if not event:
         return
-    points = event.selection.get("points", []) if isinstance(event.selection, dict) else getattr(event.selection, "points", [])
+    # Streamlit's plotly_chart selection state can be a dict-like
+    # ChartSelectionState OR a regular dict. Cover both shapes.
+    selection = None
+    try:
+        selection = event["selection"]
+    except (TypeError, KeyError):
+        selection = getattr(event, "selection", None)
+    if not selection:
+        return
+    try:
+        points = selection["points"]
+    except (TypeError, KeyError):
+        points = getattr(selection, "points", []) or []
     if not points:
         return
+
+    added: list[str] = []
     for pt in points:
-        # px.choropleth puts the fips in 'location'
-        fips = pt.get("location") if isinstance(pt, dict) else None
+        try:
+            fips = pt["location"]
+        except (TypeError, KeyError):
+            fips = getattr(pt, "location", None)
         if not fips:
             continue
-        pending = st.session_state.get("_seed_pending", [])
-        if fips not in pending:
-            pending.append(str(fips))
-        st.session_state["_seed_pending"] = pending
-    # Clear the selection on the chart for the next render
-    st.session_state.pop(source_key, None)
+        added.append(str(fips))
+
+    if not added:
+        return
+
+    current = list(st.session_state.get("seed_counties", []))
+    for fips in added:
+        if fips not in current:
+            current.append(fips)
+    st.session_state["seed_counties"] = current
+    # Stage the mode switch — applied by sidebar before its radio mounts.
+    st.session_state["_seed_mode_pending"] = "choose"
 
 
 def _render_outbreak_tab_baseline(
@@ -236,15 +265,20 @@ def _render_outbreak_tab_baseline(
         st.markdown(f'<p class="modr-caption">{caption}</p>', unsafe_allow_html=True)
     n_seeds = len(seed_fips) if seed_fips else 0
     seed_note = (
-        f"Outbreak seeds (green outline): {n_seeds} "
-        f"{'county' if n_seeds == 1 else 'counties'} marked. "
+        f"<b>{n_seeds}</b> outbreak "
+        f"{'seed' if n_seeds == 1 else 'seeds'} marked with a green outline. "
         if n_seeds
         else ""
     )
     st.markdown(
         '<p class="modr-caption">Predicted relative outbreak vulnerability '
-        f"per county (XGBoost output). {seed_note}"
-        "<em>Tip: click any county to set it as an outbreak seed.</em></p>",
+        "per county (XGBoost output). "
+        f"{seed_note}"
+        "<em>Click any county to set it as a seed</em> — each seeded county "
+        "starts the SIR simulation with <b>10 initial infections</b>; every "
+        "other county starts at 0. The disease then spreads from those seeds "
+        "by per-county transmission (β) plus inter-county adjacency coupling."
+        "</p>",
         unsafe_allow_html=True,
     )
 
