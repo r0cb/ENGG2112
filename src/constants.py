@@ -39,6 +39,12 @@ VACCINATION_BASELINE_DEFAULT = 59
 HORIZON_OPTIONS = [180, 270, 365, 540, 730]
 HORIZON_DEFAULT = 365
 
+# How many initial infections to drop into each seeded county at Day 0.
+# Increased from 10 to 500 so the seed's % infectious is visible at Day 0 on
+# the standard linear YlOrRd colour scale (10/1M = 0.001% is essentially
+# white; 500/1M = 0.05% renders as light yellow against a max of ~1.5%).
+INITIAL_SEED_COUNT = 500
+
 ALLOCATION_UNIFORM = "uniform"
 # Legacy constant name — the user-visible label is "Vulnerability-weighted
 # distribution". Kept as ALLOCATION_TARGETED in code to avoid a sweeping

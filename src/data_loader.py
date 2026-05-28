@@ -101,7 +101,7 @@ def apply_baseline(
     per_state_pct is provided, each state in the dict overrides the overall
     value for its rows. Values are expected as percentages (0-100); they get
     divided by 100 internally to match the fractional V0 the SIR uses.
-    """
+    """  # noqa
     out = flu_df.copy()
     out["V0"] = float(overall_pct) / 100.0
     if per_state_pct:
@@ -118,7 +118,7 @@ def apply_baseline(
 def apply_seed(
     flu_df: pd.DataFrame,
     seed_fips: list | None = None,
-    seed_count: float = 10.0,
+    seed_count: float | None = None,
 ) -> pd.DataFrame:
     """Return a copy of `flu_df` with the I_init column rewritten so the
     outbreak starts in the user-chosen counties.
@@ -128,17 +128,19 @@ def apply_seed(
     load_flu_df shipped with). Each chosen county gets `seed_count`
     initial infections.
     """
+    from src.constants import INITIAL_SEED_COUNT
+    sc = float(seed_count) if seed_count is not None else float(INITIAL_SEED_COUNT)
     out = flu_df.copy()
     out["I_init"] = 0.0
     if seed_fips:
         valid = [f for f in seed_fips if f in set(out["fips_str"].values)]
         if valid:
             mask = out["fips_str"].isin(valid)
-            out.loc[mask, "I_init"] = float(seed_count)
+            out.loc[mask, "I_init"] = sc
             return out
     # Fallback: original top-3 default
     top3 = out.nlargest(3, "p_outbreak").index
-    out.loc[top3, "I_init"] = float(seed_count)
+    out.loc[top3, "I_init"] = sc
     return out
 
 

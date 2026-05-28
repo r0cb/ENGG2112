@@ -172,18 +172,26 @@ def render() -> dict:
             label_visibility="collapsed",
         )
 
-        seed_counties: list[str] = list(st.session_state.get("seed_counties", []))
+        # Currently-staged seeds (the user's clicks). These show on the
+        # Outbreak Vulnerability map as a green outline, but the SIR doesn't
+        # use them until the user hits Run scenario (handled in
+        # streamlit_app.py via the committed copy).
+        seed_counties: list[str] = list(
+            st.session_state.get("seed_counties_staged", [])
+        )
         if seed_mode == SEED_MODE_CHOOSE:
             flu = load_flu_df()
             label_lookup = {
                 row["fips_str"]: f"{STATE_NAMES[row['state']]} — {row['county']}"
                 for _, row in flu.iterrows()
             }
+            committed = list(st.session_state.get("seed_counties_committed", []))
+            pending_changes = sorted(seed_counties) != sorted(committed)
             if seed_counties:
-                # Show currently-seeded counties as a list with per-row remove
-                # buttons. The seed list is driven entirely by map clicks now.
                 st.markdown(
-                    '<div class="modr-seed-list-label">CURRENTLY SEEDED</div>',
+                    '<div class="modr-seed-list-label">'
+                    f"SEEDS QUEUED ({len(seed_counties)})"
+                    "</div>",
                     unsafe_allow_html=True,
                 )
                 for fips in list(seed_counties):
@@ -197,24 +205,30 @@ def render() -> dict:
                         "✕", key=f"seed_remove_{fips}", help=f"Remove {label}"
                     ):
                         new_list = [f for f in seed_counties if f != fips]
-                        st.session_state["seed_counties"] = new_list
+                        st.session_state["seed_counties_staged"] = new_list
                         st.rerun()
                 if st.button(
-                    "Clear all seeds", key="seed_clear_all", use_container_width=True
+                    "Clear all seeds",
+                    key="seed_clear_all",
+                    use_container_width=True,
                 ):
-                    st.session_state["seed_counties"] = []
+                    st.session_state["seed_counties_staged"] = []
                     st.rerun()
-                seed_counties = list(st.session_state.get("seed_counties", []))
+                if pending_changes:
+                    st.caption(
+                        "Click **Run scenario** to apply these seeds to the "
+                        "simulation."
+                    )
+                seed_counties = list(
+                    st.session_state.get("seed_counties_staged", [])
+                )
             else:
                 st.caption(
-                    "No seeds selected yet — click any county on the Outbreak "
-                    "Vulnerability map to add one. Falls back to the top-3 "
-                    "default until you do."
+                    "No seeds queued yet — click any county on the Outbreak "
+                    "Vulnerability map. Until you press Run scenario, the "
+                    "simulation uses the top-3 default."
                 )
         else:
-            # Default mode: don't carry stale "Choose" seeds into the SIR. The
-            # actual top-3 fips are highlighted on the map via the seed
-            # overlay; the SIR uses apply_seed's fallback.
             seed_counties = []
 
         st.write("")
@@ -244,7 +258,7 @@ def render() -> dict:
         "baseline_overall": int(baseline_overall),
         "per_state_baselines": per_state_baselines,
         "seed_mode": seed_mode,
-        "seed_counties": list(seed_counties),
+        "seed_counties_staged": list(seed_counties),
         "run_clicked": run_clicked,
         "reset_clicked": reset_clicked,
     }

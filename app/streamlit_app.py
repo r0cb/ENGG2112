@@ -154,12 +154,17 @@ def main() -> None:
     baseline_overall = controls["baseline_overall"]
     baseline_per_state_tuple = baseline_key[1]
 
-    # Sorted tuple of seed fips for cache-key stability (only when user has
-    # chosen specific counties; otherwise empty → load_flu_df's top-3 default).
-    seed_fips_tuple = tuple(sorted(controls.get("seed_counties") or ()))
+    # Staged = the user's current clicks (visual only). Committed = what the
+    # SIR actually uses, only updated when Run scenario is clicked. This
+    # separation means each click doesn't force a baseline_run recompute.
+    staged_seeds = tuple(sorted(controls.get("seed_counties_staged") or ()))
+    committed_seeds = tuple(
+        sorted(st.session_state.get("seed_counties_committed", []) or ())
+    )
 
+    # flu (used for the SIR baseline metrics + Vaccination tab) uses committed.
     flu = _flu_with_baseline_and_seed(
-        baseline_overall, controls["per_state_baselines"], seed_fips_tuple
+        baseline_overall, controls["per_state_baselines"], committed_seeds
     )
     geojson = load_geojson()
     selected = controls["states"] or STATES
@@ -183,6 +188,13 @@ def main() -> None:
         st.session_state["_just_reset"] = True
 
     if controls["run_clicked"]:
+        # Commit any staged click-seeds: they now become the active SIR
+        # seeds. The rest of the script uses `committed_seeds` from here.
+        st.session_state["seed_counties_committed"] = list(staged_seeds)
+        committed_seeds = staged_seeds
+        flu = _flu_with_baseline_and_seed(
+            baseline_overall, controls["per_state_baselines"], committed_seeds
+        )
         sim = _scenario_run(
             controls["vax_boost_pp"],
             controls["mobility"],
@@ -190,7 +202,7 @@ def main() -> None:
             strategy,
             baseline_overall,
             baseline_per_state_tuple,
-            seed_fips_tuple,
+            committed_seeds,
         )
         st.session_state["sim_result"] = sim
         st.session_state["sim_metrics"] = aggregate_metrics(sim)
@@ -200,7 +212,7 @@ def main() -> None:
             "horizon": controls["horizon"],
             "strategy": strategy,
             "baseline_overall": baseline_overall,
-            "seed_fips": seed_fips_tuple,
+            "seed_fips": committed_seeds,
         }
         # Always compute the other strategy's outcome at the same budget so
         # the comparison callout below can quantify the trade-off.
@@ -216,7 +228,7 @@ def main() -> None:
             other_strategy,
             baseline_overall,
             baseline_per_state_tuple,
-            seed_fips_tuple,
+            committed_seeds,
         )
         st.session_state["counterfactual_metrics"] = aggregate_metrics(
             other_sim
@@ -227,7 +239,7 @@ def main() -> None:
         controls["horizon"],
         baseline_overall,
         baseline_per_state_tuple,
-        seed_fips_tuple,
+        committed_seeds,
     )
     baseline_metrics = aggregate_metrics(baseline_sim)
 
@@ -280,7 +292,14 @@ def main() -> None:
             seed_fips=effective_seeds,
         )
     else:
-        effective_seeds = _effective_seed_fips(flu)
+        # The static Outbreak Vulnerability map shows STAGED seeds (so the
+        # user gets immediate visual feedback on every click), but if the
+        # user hasn't queued anything yet, fall back to whatever the SIR is
+        # currently running (committed → top-3 default).
+        if controls["seed_mode"] == "choose" and staged_seeds:
+            display_seeds = list(staged_seeds)
+        else:
+            display_seeds = _effective_seed_fips(flu)
         map_panel.render_baseline(
             flu_with_v_eff,
             geojson,
@@ -288,7 +307,7 @@ def main() -> None:
             focused_state=current_focus,
             vax_boost_pp=controls["vax_boost_pp"],
             strategy_label=strategy_label,
-            seed_fips=effective_seeds,
+            seed_fips=display_seeds,
         )
         if st.session_state.pop("_just_reset", False):
             st.caption("Viewing baseline scenario (no intervention applied).")

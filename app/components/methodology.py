@@ -66,16 +66,18 @@ spatial coupling along the county-adjacency graph:
 
 ### Outbreak seeding
 
-The SIR must start somewhere. Each *seeded* county gets **10 initial
-infections** at Day 0; every other county starts with zero. Two ways to
+The SIR must start somewhere. Each *seeded* county gets **500 initial
+infections** at Day 0; every other county starts at zero. Two ways to
 choose seeds:
 
 - **Top-3 vulnerability (default)** seeds the three counties with the
   highest XGBoost `p_outbreak` score. These typically sit on the
   high-density NY corridor.
 - **Choose counties** mode lets you click any county on the Outbreak
-  Vulnerability map to set it as a seed; clicked counties show a green
-  outline. Click again or use the sidebar `✕` to remove.
+  Vulnerability map. Clicks queue lightweight — they only update the
+  green outline and the sidebar chip list, NOT the SIR — until you
+  press **Run scenario**, which commits the queued seeds. The
+  separation keeps clicks instant.
 
 A frequent observation: *"I seeded County X but the visible peak appears
 in County Y."* This is real SIR dynamics, not a wiring bug. Reasons:
@@ -86,12 +88,11 @@ in County Y."* This is real SIR dynamics, not a wiring bug. Reasons:
 2. The Outbreak Progression map shows **% population currently
    infectious**, not where the outbreak began. A neighbour county with
    higher population can have more *absolute* cases than the seed
-   despite being seeded later via adjacency.
-3. The colour scale on the animated map uses a non-linear gradient that
-   gives visible colour to even very small infection percentages (a
-   10-case seed in a 1-million-population county is 0.001%, but the
-   scale renders it as light yellow rather than invisible white). The
-   green outline always marks where the SIR was actually seeded.
+   despite being seeded later via adjacency. The green outline always
+   marks where the SIR was actually started.
+3. With 500 initial infections in a county of ~1M, Day 0's coverage is
+   ~0.05% — visible as light yellow on the standard YlOrRd colour scale
+   before the disease spreads.
 
 ### The map tabs
 

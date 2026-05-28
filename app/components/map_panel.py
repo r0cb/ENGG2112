@@ -201,11 +201,11 @@ def _capture_click_seed(event, source_key: str) -> None:
     if not added:
         return
 
-    current = list(st.session_state.get("seed_counties", []))
+    current = list(st.session_state.get("seed_counties_staged", []))
     for fips in added:
         if fips not in current:
             current.append(fips)
-    st.session_state["seed_counties"] = current
+    st.session_state["seed_counties_staged"] = current
     # Stage the mode switch — applied by sidebar before its radio mounts.
     st.session_state["_seed_mode_pending"] = "choose"
 
@@ -274,10 +274,12 @@ def _render_outbreak_tab_baseline(
         '<p class="modr-caption">Predicted relative outbreak vulnerability '
         "per county (XGBoost output). "
         f"{seed_note}"
-        "<em>Click any county to set it as a seed</em> — each seeded county "
-        "starts the SIR simulation with <b>10 initial infections</b>; every "
-        "other county starts at 0. The disease then spreads from those seeds "
-        "by per-county transmission (β) plus inter-county adjacency coupling."
+        "<em>Click any county to queue it as a seed</em> — clicks are "
+        "lightweight (no SIR recompute). They take effect the next time you "
+        "press <b>Run scenario</b>. Each seeded county then starts the SIR "
+        "simulation with <b>500 initial infections</b>; every other county "
+        "starts at 0. The disease spreads from those seeds via per-county "
+        "transmission (β) and inter-county adjacency coupling."
         "</p>",
         unsafe_allow_html=True,
     )
