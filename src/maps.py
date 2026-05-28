@@ -22,6 +22,44 @@ from src.constants import (
 )
 
 
+# Lon/lat bounds tight to NY, PA, CT, DE — used to zoom the single big USA
+# choropleth onto our 4-state region. Without this, scope='usa' overrides
+# fitbounds='locations' and the map shows the entire continental USA with
+# the states as a tiny cluster in the upper-east.
+FOUR_STATE_LON_RANGE = (-80.8, -71.5)
+# DE's southernmost county (Sussex) hits ~38.45N — with a 38.3 lower bound,
+# mercator's bounds-respecting render clipped the bottom of DE. Padded south
+# (37.8) and north (45.8) gives every state ~0.5° clearance from the edges.
+FOUR_STATE_LAT_RANGE = (37.8, 45.8)
+
+
+def _zoom_to_four_states(fig: go.Figure) -> go.Figure:
+    """Force the geo to the NY-PA-CT-DE bounding box. Called after
+    _apply_scientific_theme on the single-USA-map choropleths.
+
+    NOTE: scope='usa' implies the albers-usa projection, which IGNORES
+    lonaxis/lataxis range — it has fixed parameters that always show all
+    50 states. To honour our 4-state bounding box we must drop scope='usa'
+    and switch to an explicit projection (mercator) that respects range.
+    """
+    fig.update_geos(
+        scope=None,
+        projection=dict(type="mercator"),
+        fitbounds=False,
+        lonaxis=dict(range=list(FOUR_STATE_LON_RANGE)),
+        lataxis=dict(range=list(FOUR_STATE_LAT_RANGE)),
+        visible=False,
+        showcoastlines=False,
+        showland=False,
+        showcountries=False,
+        showsubunits=False,
+        showlakes=False,
+        showocean=False,
+        bgcolor=BG,
+    )
+    return fig
+
+
 def _add_seed_overlay(
     fig: go.Figure,
     geojson: dict,
@@ -155,6 +193,7 @@ def build_vaccination_choropleth(
     )
     fig.update_traces(marker_line_color=BG, marker_line_width=0.5)
     fig = _apply_scientific_theme(fig)
+    fig = _zoom_to_four_states(fig)
     fig.update_layout(
         coloraxis_colorbar=dict(
             title=dict(
@@ -604,6 +643,7 @@ def build_baseline_choropleth(
     )
     fig.update_traces(marker_line_color=BG, marker_line_width=0.5)
     fig = _apply_scientific_theme(fig)
+    fig = _zoom_to_four_states(fig)
     fig.update_layout(
         coloraxis_colorbar=dict(
             title=dict(
@@ -670,6 +710,7 @@ def build_animated_choropleth(
     )
     fig.update_traces(marker_line_color=BG, marker_line_width=0.4)
     fig = _apply_scientific_theme(fig)
+    fig = _zoom_to_four_states(fig)
     fig.update_layout(
         coloraxis_colorbar=dict(
             title=dict(
