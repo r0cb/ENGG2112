@@ -41,6 +41,7 @@ from src.constants import (  # noqa: E402
 )
 from src.data_loader import (  # noqa: E402
     apply_baseline,
+    apply_seed,
     build_animation_frame,
     load_adjacency,
     load_flu_df,
@@ -71,15 +72,26 @@ def _baseline_key(
     return baseline_overall, tuple(sorted(per_state_baselines.items()))
 
 
-def _flu_with_baseline(baseline_overall: int, per_state_baselines: dict) -> "pd.DataFrame":
-    return apply_baseline(load_flu_df(), baseline_overall, per_state_baselines)
+def _flu_with_baseline_and_seed(
+    baseline_overall: int,
+    per_state_baselines: dict,
+    seed_fips: tuple | list | None = None,
+) -> "pd.DataFrame":
+    flu = apply_baseline(load_flu_df(), baseline_overall, per_state_baselines)
+    flu = apply_seed(flu, seed_fips=list(seed_fips) if seed_fips else None)
+    return flu
 
 
 @st.cache_data(show_spinner=False)
 def _baseline_run(
-    horizon: int, baseline_overall: int, baseline_per_state: tuple
+    horizon: int,
+    baseline_overall: int,
+    baseline_per_state: tuple,
+    seed_fips: tuple,
 ) -> dict:
-    flu = _flu_with_baseline(baseline_overall, dict(baseline_per_state))
+    flu = _flu_with_baseline_and_seed(
+        baseline_overall, dict(baseline_per_state), seed_fips
+    )
     adj = load_adjacency()
     return run_sir(flu, adj, T=horizon, vax_boost=0.0, mobility_factor=1.0)
 
@@ -92,8 +104,11 @@ def _scenario_run(
     strategy: str,
     baseline_overall: int,
     baseline_per_state: tuple,
+    seed_fips: tuple,
 ) -> dict:
-    flu = _flu_with_baseline(baseline_overall, dict(baseline_per_state))
+    flu = _flu_with_baseline_and_seed(
+        baseline_overall, dict(baseline_per_state), seed_fips
+    )
     adj = load_adjacency()
     total_boost = vax_boost_pp / 100.0
     vb = vax_boost_for_strategy(flu, total_boost, strategy)
@@ -131,7 +146,13 @@ def main() -> None:
     baseline_overall = controls["baseline_overall"]
     baseline_per_state_tuple = baseline_key[1]
 
-    flu = _flu_with_baseline(baseline_overall, controls["per_state_baselines"])
+    # Sorted tuple of seed fips for cache-key stability (only when user has
+    # chosen specific counties; otherwise empty → load_flu_df's top-3 default).
+    seed_fips_tuple = tuple(sorted(controls.get("seed_counties") or ()))
+
+    flu = _flu_with_baseline_and_seed(
+        baseline_overall, controls["per_state_baselines"], seed_fips_tuple
+    )
     geojson = load_geojson()
     selected = controls["states"] or STATES
 
@@ -161,6 +182,7 @@ def main() -> None:
             strategy,
             baseline_overall,
             baseline_per_state_tuple,
+            seed_fips_tuple,
         )
         st.session_state["sim_result"] = sim
         st.session_state["sim_metrics"] = aggregate_metrics(sim)
@@ -170,6 +192,7 @@ def main() -> None:
             "horizon": controls["horizon"],
             "strategy": strategy,
             "baseline_overall": baseline_overall,
+            "seed_fips": seed_fips_tuple,
         }
         # Always compute the other strategy's outcome at the same budget so
         # the comparison callout below can quantify the trade-off.
@@ -185,6 +208,7 @@ def main() -> None:
             other_strategy,
             baseline_overall,
             baseline_per_state_tuple,
+            seed_fips_tuple,
         )
         st.session_state["counterfactual_metrics"] = aggregate_metrics(
             other_sim
@@ -192,7 +216,10 @@ def main() -> None:
         st.session_state.pop("_just_reset", None)
 
     baseline_sim = _baseline_run(
-        controls["horizon"], baseline_overall, baseline_per_state_tuple
+        controls["horizon"],
+        baseline_overall,
+        baseline_per_state_tuple,
+        seed_fips_tuple,
     )
     baseline_metrics = aggregate_metrics(baseline_sim)
 
@@ -261,10 +288,17 @@ def main() -> None:
         st.session_state["strategy"] = opt_controls["strategy"]
         st.rerun()
     if has_scenario:
-        optimisation.render_strategy_gain(
-            st.session_state["active_params"]["strategy"],
-            sim_metrics,
-            st.session_state.get("counterfactual_metrics"),
+        # Re-derive primary from the CURRENT radio (not active_params), so
+        # the comparison labels stay correct when the user toggles the
+        # strategy after a Run without re-running.
+        optimisation.render_strategy_comparison(
+            current_strategy=strategy,
+            run_strategy=st.session_state["active_params"]["strategy"],
+            sim_metrics=sim_metrics,
+            counterfactual_metrics=st.session_state.get(
+                "counterfactual_metrics"
+            ),
+            baseline_metrics=baseline_metrics,
         )
 
     howto.render()

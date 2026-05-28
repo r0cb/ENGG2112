@@ -15,6 +15,11 @@ from src.constants import (
     STATES,
     VACCINATION_BASELINE_DEFAULT,
 )
+from src.data_loader import load_flu_df
+
+
+SEED_MODE_DEFAULT = "default"
+SEED_MODE_CHOOSE = "choose"
 
 
 def render() -> dict:
@@ -139,6 +144,66 @@ def render() -> dict:
                 )
                 per_state_baselines[state] = val
 
+        # === Outbreak origin ===
+        # Consume any pending click-to-seed before the multiselect mounts, so
+        # we don't get StreamlitAPIException when assigning to a keyed widget
+        # after it's been created.
+        pending_seed = st.session_state.pop("_seed_pending", None)
+        if pending_seed:
+            current = list(st.session_state.get("seed_counties", []))
+            for f in pending_seed:
+                if f not in current:
+                    current.append(f)
+            st.session_state["seed_counties"] = current
+            st.session_state["seed_mode"] = SEED_MODE_CHOOSE
+
+        st.markdown(
+            '<div class="modr-section-label" style="margin-top:1.25rem">'
+            "Outbreak origin"
+            "</div>",
+            unsafe_allow_html=True,
+        )
+
+        seed_mode = st.radio(
+            "Seed mode",
+            options=[SEED_MODE_DEFAULT, SEED_MODE_CHOOSE],
+            format_func=lambda x: (
+                "Top-3 vulnerability counties (default)"
+                if x == SEED_MODE_DEFAULT
+                else "Choose counties"
+            ),
+            key="seed_mode",
+            label_visibility="collapsed",
+        )
+
+        seed_counties: list[str] = []
+        if seed_mode == SEED_MODE_CHOOSE:
+            flu = load_flu_df()
+            option_fips: list[str] = []
+            label_lookup: dict[str, str] = {}
+            for state in STATES:
+                state_df = flu[flu["state"] == state].sort_values("county")
+                for _, row in state_df.iterrows():
+                    f = row["fips_str"]
+                    option_fips.append(f)
+                    label_lookup[f] = f"{STATE_NAMES[state]} — {row['county']}"
+            seed_counties = st.multiselect(
+                "Seed counties",
+                options=option_fips,
+                format_func=lambda f: label_lookup.get(f, f),
+                key="seed_counties",
+                help=(
+                    "Pick one or more counties where the outbreak begins. "
+                    "You can also click a county on the Outbreak Vulnerability "
+                    "map to add it as a seed."
+                ),
+            )
+            if not seed_counties:
+                st.caption(
+                    "No seeds selected yet — falls back to the top-3 default. "
+                    "Click any county on the map to add one."
+                )
+
         st.write("")
         run_clicked = st.button(
             "Run scenario", type="primary", use_container_width=True
@@ -165,6 +230,8 @@ def render() -> dict:
         "horizon": int(horizon),
         "baseline_overall": int(baseline_overall),
         "per_state_baselines": per_state_baselines,
+        "seed_mode": seed_mode,
+        "seed_counties": list(seed_counties),
         "run_clicked": run_clicked,
         "reset_clicked": reset_clicked,
     }

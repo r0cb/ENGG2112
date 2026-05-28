@@ -131,77 +131,144 @@ def render_controls() -> dict:
     return {"strategy": strategy}
 
 
-def render_strategy_gain(
-    primary_strategy: str,
-    primary_metrics: dict,
+def render_strategy_comparison(
+    current_strategy: str,
+    run_strategy: str,
+    sim_metrics: dict,
     counterfactual_metrics: dict | None,
+    baseline_metrics: dict | None,
 ) -> None:
-    """Side-by-side comparison: how many cases each strategy would have
-    produced at the current settings. Always shown when a scenario is
-    active.
+    """Card-style side-by-side comparison of Uniform vs Vulnerability-weighted
+    at the current scenario settings.
+
+    The visual is two stat cards above a prose summary. Each card shows the
+    strategy's total new infections, the percentage reduction vs the no-
+    intervention baseline (so the absolute value of intervening shows), and
+    flags for "Selected" (current radio) and "Winner" (fewer cases).
+
+    The labels are derived from `current_strategy` — what the radio shows
+    *right now* — not from `run_strategy`. This fixes the stale-state bug
+    where toggling the radio after a Run kept the previous selection
+    labelled as the user's choice.
     """
-    if counterfactual_metrics is None:
+    if counterfactual_metrics is None or baseline_metrics is None:
         return
-    other_strategy = (
+
+    # Figure out which metrics belong to which strategy. sim_metrics was
+    # computed at run_strategy; counterfactual_metrics at the OTHER strategy.
+    if run_strategy == ALLOCATION_UNIFORM:
+        uniform_m = sim_metrics
+        vuln_m = counterfactual_metrics
+    else:
+        uniform_m = counterfactual_metrics
+        vuln_m = sim_metrics
+
+    baseline_cases = float(baseline_metrics["new_infections"])
+    uniform_cases = float(uniform_m["new_infections"])
+    vuln_cases = float(vuln_m["new_infections"])
+
+    def _pct_vs_baseline(cases: float) -> float:
+        if baseline_cases <= 0:
+            return 0.0
+        return (baseline_cases - cases) / baseline_cases * 100.0
+
+    uniform_pct = _pct_vs_baseline(uniform_cases)
+    vuln_pct = _pct_vs_baseline(vuln_cases)
+    winner = (
         ALLOCATION_UNIFORM
-        if primary_strategy == ALLOCATION_TARGETED
+        if uniform_cases < vuln_cases
         else ALLOCATION_TARGETED
+        if vuln_cases < uniform_cases
+        else None
     )
-    primary_cases = primary_metrics["new_infections"]
-    other_cases = counterfactual_metrics["new_infections"]
-    primary_label = ALLOCATION_LABELS[primary_strategy]
-    other_label = ALLOCATION_LABELS[other_strategy]
+    same = abs(uniform_cases - vuln_cases) < 1
 
-    delta = other_cases - primary_cases  # +ve means primary is better
+    def _badges(strategy_key: str) -> str:
+        bits = []
+        if strategy_key == current_strategy:
+            bits.append(
+                '<span class="modr-cmp-badge modr-cmp-badge-selected">'
+                "Your selection</span>"
+            )
+        if winner == strategy_key and not same:
+            bits.append(
+                '<span class="modr-cmp-badge modr-cmp-badge-winner">'
+                "Fewer cases</span>"
+            )
+        return "".join(bits)
 
-    if abs(delta) < 1:
-        st.markdown(
-            '<div class="modr-opt-gain neutral">'
-            "<b>Strategy comparison.</b> "
-            f"<b>{primary_label}</b> and <b>{other_label}</b> produce nearly "
-            "identical case totals at these settings. The choice of "
-            "distribution rule matters more at moderate budgets and with "
-            "non-uniform baseline coverage."
-            "</div>",
-            unsafe_allow_html=True,
+    def _card(strategy_key: str, cases: float, pct_reduction: float) -> str:
+        label = ALLOCATION_LABELS[strategy_key]
+        is_current = strategy_key == current_strategy
+        is_winner = winner == strategy_key and not same
+        cls = "modr-cmp-card"
+        if is_current:
+            cls += " is-selected"
+        if is_winner:
+            cls += " is-winner"
+        return (
+            f'<div class="{cls}">'
+            f'<div class="modr-cmp-card-title">{label}</div>'
+            f'<div class="modr-cmp-card-cases">'
+            f"{int(round(cases)):,}<span class='modr-cmp-card-cases-unit'>"
+            "total new infections</span></div>"
+            f'<div class="modr-cmp-card-pct">'
+            f"<b>−{pct_reduction:.1f}%</b> vs no-intervention baseline "
+            f"({int(round(baseline_cases)):,} cases)"
+            "</div>"
+            f'<div class="modr-cmp-card-badges">{_badges(strategy_key)}</div>'
+            "</div>"
         )
-        return
 
-    if delta > 0:
-        # Active strategy wins
-        st.markdown(
-            f'<div class="modr-opt-gain positive">'
-            f"<b>Strategy comparison — {primary_label} wins.</b><br>"
-            f"At the current budget and baseline, your chosen "
-            f"<b>{primary_label}</b> averts "
-            f"<b>{int(round(delta)):,}</b> more cases than "
-            f"<b>{other_label}</b> would have at the same total budget."
-            "</div>",
-            unsafe_allow_html=True,
+    cards = _card(ALLOCATION_UNIFORM, uniform_cases, uniform_pct) + _card(
+        ALLOCATION_TARGETED, vuln_cases, vuln_pct
+    )
+
+    # Prose summary anchored to the current radio.
+    if same:
+        prose = (
+            "<b>The two strategies produce near-identical totals at these "
+            "settings.</b> Allocation matters more at moderate budgets and "
+            "with lower baseline coverage — try moving those sliders to "
+            "see the gap open up."
         )
     else:
-        if primary_strategy == ALLOCATION_TARGETED:
-            insight = (
-                "Targeting concentrated doses on already-well-vaccinated "
-                "high-vulnerability counties, where the marginal vaccine "
-                "has diminishing returns. Uniform reached less-vaccinated "
-                "counties, where each dose moved the population closer to "
-                "herd immunity. Try lowering the baseline slider — "
-                "vulnerability-weighting should flip back to winning."
+        winner_label = ALLOCATION_LABELS[winner]
+        loser_label = ALLOCATION_LABELS[
+            ALLOCATION_UNIFORM
+            if winner == ALLOCATION_TARGETED
+            else ALLOCATION_TARGETED
+        ]
+        winner_cases = uniform_cases if winner == ALLOCATION_UNIFORM else vuln_cases
+        loser_cases = vuln_cases if winner == ALLOCATION_UNIFORM else uniform_cases
+        delta_cases = loser_cases - winner_cases
+        rel_pct = (
+            (delta_cases / loser_cases) * 100.0 if loser_cases > 0 else 0.0
+        )
+        current_is_winner = current_strategy == winner
+        if current_is_winner:
+            prose = (
+                f"<b>{winner_label}</b> — your current choice — averts "
+                f"<b>{int(round(delta_cases)):,}</b> more cases than "
+                f"<b>{loser_label}</b> would at the same budget, a "
+                f"<b>{rel_pct:.1f}%</b> reduction in cases versus the "
+                "alternative rule. Keep this strategy active for the "
+                "current settings."
             )
         else:
-            insight = (
-                "Vulnerability weighting routed more doses to the densest, "
-                "highest-contact counties — exactly the ones the SIR is "
-                "most sensitive to."
+            prose = (
+                f"<b>{winner_label}</b> averts "
+                f"<b>{int(round(delta_cases)):,}</b> more cases than your "
+                f"current <b>{loser_label}</b> selection — a "
+                f"<b>{rel_pct:.1f}%</b> improvement on cases. Toggle the "
+                "radio above to switch."
             )
-        st.markdown(
-            f'<div class="modr-opt-gain negative">'
-            f"<b>Strategy comparison — {other_label} would have done better.</b>"
-            f"<br>Switching to <b>{other_label}</b> at the same total "
-            f"budget would avert <b>{int(round(-delta)):,}</b> more cases "
-            f"than your current <b>{primary_label}</b> choice.<br><br>"
-            f"{insight}"
-            "</div>",
-            unsafe_allow_html=True,
-        )
+
+    st.markdown(
+        '<div class="modr-cmp-section">'
+        '<div class="modr-cmp-header">Strategy comparison at this budget</div>'
+        f'<div class="modr-cmp-cards">{cards}</div>'
+        f'<div class="modr-cmp-prose">{prose}</div>'
+        "</div>",
+        unsafe_allow_html=True,
+    )

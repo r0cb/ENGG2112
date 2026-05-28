@@ -305,6 +305,117 @@ button[data-testid$="-pill_DE"]:disabled {
     line-height: 1.5;
     font-style: italic;
 }
+
+/* === Strategy comparison cards === */
+.modr-cmp-section {
+    margin: 1.25rem 0;
+    border: 1px solid #E5E5E5;
+    border-radius: 4px;
+    background: #FFFFFF;
+    padding: 1.25rem 1.5rem;
+}
+.modr-cmp-header {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #6B6B6B;
+    font-weight: 500;
+    margin-bottom: 0.85rem;
+}
+.modr-cmp-cards {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-bottom: 1rem;
+}
+.modr-cmp-card {
+    border: 1px solid #E5E5E5;
+    border-radius: 2px;
+    background: #FFFFFF;
+    padding: 16px 18px;
+    transition: border-color 0.12s ease;
+}
+.modr-cmp-card.is-selected {
+    border-color: #1A1A1A;
+    box-shadow: 0 0 0 1px #1A1A1A inset;
+}
+.modr-cmp-card.is-winner {
+    border-left: 3px solid #3A7D5C;
+}
+.modr-cmp-card.is-selected.is-winner {
+    border-left: 3px solid #3A7D5C;
+}
+.modr-cmp-card-title {
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: #1A1A1A;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 0.65rem;
+}
+.modr-cmp-card-cases {
+    font-size: 1.6rem;
+    font-weight: 500;
+    color: #1A1A1A;
+    line-height: 1.1;
+    font-variant-numeric: tabular-nums;
+    margin-bottom: 0.4rem;
+}
+.modr-cmp-card-cases-unit {
+    font-size: 0.7rem;
+    font-weight: 400;
+    color: #6B6B6B;
+    margin-left: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+.modr-cmp-card-pct {
+    font-size: 0.78rem;
+    color: #6B6B6B;
+    line-height: 1.45;
+    margin-bottom: 0.6rem;
+}
+.modr-cmp-card-pct b {
+    color: #3A7D5C;
+    font-weight: 500;
+}
+.modr-cmp-card-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    min-height: 1.4rem;
+}
+.modr-cmp-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    font-size: 0.6rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    border-radius: 999px;
+    font-weight: 500;
+}
+.modr-cmp-badge-selected {
+    background: #1A1A1A;
+    color: #FFFFFF;
+}
+.modr-cmp-badge-winner {
+    background: #3A7D5C;
+    color: #FFFFFF;
+}
+.modr-cmp-prose {
+    font-size: 0.85rem;
+    color: #1A1A1A;
+    line-height: 1.55;
+    padding-top: 0.85rem;
+    border-top: 1px solid #F0F0F0;
+}
+.modr-cmp-prose b {
+    font-weight: 500;
+}
+
+@media (max-width: 700px) {
+    .modr-cmp-cards { grid-template-columns: 1fr; }
+}
 .modr-opt-gain {
     margin-top: 0.5rem;
     padding: 12px 14px;

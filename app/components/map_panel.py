@@ -160,6 +160,27 @@ def _render_vaccination_tab(
         )
 
 
+def _capture_click_seed(event, source_key: str) -> None:
+    """If the user clicked a county on a Plotly choropleth, stage the fips
+    in session_state for the sidebar to consume on the next render."""
+    if not event or not getattr(event, "selection", None):
+        return
+    points = event.selection.get("points", []) if isinstance(event.selection, dict) else getattr(event.selection, "points", [])
+    if not points:
+        return
+    for pt in points:
+        # px.choropleth puts the fips in 'location'
+        fips = pt.get("location") if isinstance(pt, dict) else None
+        if not fips:
+            continue
+        pending = st.session_state.get("_seed_pending", [])
+        if fips not in pending:
+            pending.append(str(fips))
+        st.session_state["_seed_pending"] = pending
+    # Clear the selection on the chart for the next render
+    st.session_state.pop(source_key, None)
+
+
 def _render_outbreak_tab_baseline(
     flu: pd.DataFrame,
     geojson: dict,
@@ -171,7 +192,15 @@ def _render_outbreak_tab_baseline(
 
     if is_focused or len(state_order) <= 1:
         fig = build_baseline_choropleth(flu, geojson, selected_states, focused_state)
-        st.plotly_chart(fig, use_container_width=True, config=_BASELINE_CONFIG)
+        event = st.plotly_chart(
+            fig,
+            use_container_width=True,
+            config=_BASELINE_CONFIG,
+            on_select="rerun",
+            selection_mode="points",
+            key="outbreak_baseline_single",
+        )
+        _capture_click_seed(event, "outbreak_baseline_single")
     else:
         rows = [state_order[i : i + 2] for i in range(0, len(state_order), 2)]
         for row_idx, row in enumerate(rows):
@@ -184,9 +213,16 @@ def _render_outbreak_tab_baseline(
                     fig = build_single_state_choropleth(
                         state_df, geojson, show_colorbar=show_cb
                     )
-                    st.plotly_chart(
-                        fig, use_container_width=True, config=_BASELINE_CONFIG
+                    chart_key = f"outbreak_baseline_{state}"
+                    event = st.plotly_chart(
+                        fig,
+                        use_container_width=True,
+                        config=_BASELINE_CONFIG,
+                        on_select="rerun",
+                        selection_mode="points",
+                        key=chart_key,
                     )
+                    _capture_click_seed(event, chart_key)
 
     _ct_warning(focused_state, selected_states)
     caption = _focus_caption(focused_state, selected_states)
@@ -194,7 +230,8 @@ def _render_outbreak_tab_baseline(
         st.markdown(f'<p class="modr-caption">{caption}</p>', unsafe_allow_html=True)
     st.markdown(
         '<p class="modr-caption">Predicted relative outbreak vulnerability '
-        "per county (XGBoost output).</p>",
+        "per county (XGBoost output). "
+        "<em>Tip: click any county to set it as an outbreak seed.</em></p>",
         unsafe_allow_html=True,
     )
 

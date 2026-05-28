@@ -115,6 +115,33 @@ def apply_baseline(
     return out
 
 
+def apply_seed(
+    flu_df: pd.DataFrame,
+    seed_fips: list | None = None,
+    seed_count: float = 10.0,
+) -> pd.DataFrame:
+    """Return a copy of `flu_df` with the I_init column rewritten so the
+    outbreak starts in the user-chosen counties.
+
+    seed_fips is a list of fips_str values. If empty or None, the original
+    "top-3 counties by p_outbreak" default is used (same behaviour as
+    load_flu_df shipped with). Each chosen county gets `seed_count`
+    initial infections.
+    """
+    out = flu_df.copy()
+    out["I_init"] = 0.0
+    if seed_fips:
+        valid = [f for f in seed_fips if f in set(out["fips_str"].values)]
+        if valid:
+            mask = out["fips_str"].isin(valid)
+            out.loc[mask, "I_init"] = float(seed_count)
+            return out
+    # Fallback: original top-3 default
+    top3 = out.nlargest(3, "p_outbreak").index
+    out.loc[top3, "I_init"] = float(seed_count)
+    return out
+
+
 def baseline_seeded_fips(flu: pd.DataFrame) -> list:
     """Return the 3 fips that get I_init seeding (top 3 by p_outbreak)."""
     return flu.loc[flu["I_init"] > 0, "fips_str"].tolist()
