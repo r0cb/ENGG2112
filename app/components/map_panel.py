@@ -24,6 +24,7 @@ from src.maps import (
     build_single_state_choropleth,
     build_single_state_vaccination_choropleth,
     build_synced_grid_animated_choropleth,
+    build_vaccination_choropleth,
 )
 
 
@@ -89,8 +90,8 @@ def _render_vaccination_tab(
     vax_boost_pp: int,
     strategy_label: str,
 ) -> None:
-    """Static green-scale coverage map. Same layout contract as the outbreak
-    tab (single big map when focused, 2x2 grid otherwise)."""
+    """Single big USA-scoped green-scale coverage map showing effective
+    vaccination coverage across all selected states."""
     state_order = _ordered_states(selected_states)
     is_focused = focused_state and focused_state in state_order
     target_states = [focused_state] if is_focused else state_order
@@ -99,44 +100,16 @@ def _render_vaccination_tab(
     if "V_eff" not in df.columns:
         df["V_eff"] = df["V0"]
 
-    # Use an absolute 0%-100% colour scale so the map's appearance carries
-    # the same meaning across strategies. Autoscaling per render (which we
-    # tried previously) makes toggling strategies look more visually similar
-    # than they actually are — auto-shrinking the range hides the fact that
-    # the Vulnerability-weighted distribution spreads V_eff values over a
-    # wider band than Uniform does. Fixed scale = the same shade of green
-    # always means the same coverage percentage.
-    range_color = (0.0, 1.0)
-
-    if len(target_states) <= 1:
-        # one big map
-        state_df = df[df["state"] == target_states[0]]
-        fig = build_single_state_vaccination_choropleth(
-            state_df,
-            geojson,
-            show_colorbar=True,
-            height=520,
-            range_color=range_color,
-        )
-        st.plotly_chart(fig, use_container_width=True, config=_BASELINE_CONFIG)
-    else:
-        rows = [target_states[i : i + 2] for i in range(0, len(target_states), 2)]
-        for row_idx, row in enumerate(rows):
-            cols = st.columns(len(row), gap="small")
-            for col_idx, (col, state) in enumerate(zip(cols, row)):
-                with col:
-                    _state_label(STATE_NAMES[state])
-                    state_df = df[df["state"] == state]
-                    show_cb = row_idx == 0 and col_idx == len(row) - 1
-                    fig = build_single_state_vaccination_choropleth(
-                        state_df,
-                        geojson,
-                        show_colorbar=show_cb,
-                        range_color=range_color,
-                    )
-                    st.plotly_chart(
-                        fig, use_container_width=True, config=_BASELINE_CONFIG
-                    )
+    # Single big USA-scoped vaccination choropleth across all selected states.
+    fig = build_vaccination_choropleth(
+        df, geojson, selected_states, focused_state=focused_state
+    )
+    st.plotly_chart(
+        fig,
+        use_container_width=True,
+        config=_BASELINE_CONFIG,
+        key="vaccination_coverage_single",
+    )
 
     _ct_warning(focused_state, selected_states)
     if vax_boost_pp > 0:
@@ -229,73 +202,39 @@ def _render_outbreak_tab_baseline(
     selected_states: list,
     focused_state: str | None,
     seed_fips: list | tuple | None = None,
-    cached_panel_builder=None,
+    cached_base_figure=None,
 ) -> None:
-    """Render the static outbreak vulnerability map.
+    """Render the Outbreak Vulnerability tab as a SINGLE big USA-scoped
+    choropleth covering all selected states (was a 2x2 grid).
 
-    cached_panel_builder, if provided, is a function (state, show_colorbar) →
-    base plotly figure (no seed overlay). Used to skip the expensive
-    px.choropleth call on every rerun; map_panel deep-copies the cached
-    figure and applies the per-render seed overlay on top.
+    Faster: one px.choropleth call, one Plotly chart in the DOM, one
+    on_select handler. cached_base_figure is the result of the cached
+    build_baseline_choropleth (no seed overlay); we deep-copy and add the
+    overlay per render so the cache stays immutable.
     """
-    state_order = _ordered_states(selected_states)
-    is_focused = focused_state and focused_state in state_order
-
-    if is_focused or len(state_order) <= 1:
+    if cached_base_figure is not None:
+        fig = copy.deepcopy(cached_base_figure)
+        if seed_fips:
+            valid = set(flu["fips_str"].values)
+            local_seeds = [f for f in seed_fips if f in valid]
+            if local_seeds:
+                fig = _add_seed_overlay(fig, geojson, local_seeds)
+    else:
         fig = build_baseline_choropleth(
             flu, geojson, selected_states, focused_state, seed_fips=seed_fips
         )
-        event = st.plotly_chart(
-            fig,
-            use_container_width=True,
-            config=_BASELINE_CONFIG,
-            on_select="rerun",
-            selection_mode="points",
-            key="outbreak_baseline_single",
-        )
-        _capture_click_seed(event, "outbreak_baseline_single")
-    else:
-        rows = [state_order[i : i + 2] for i in range(0, len(state_order), 2)]
-        for row_idx, row in enumerate(rows):
-            cols = st.columns(len(row), gap="small")
-            for col_idx, (col, state) in enumerate(zip(cols, row)):
-                with col:
-                    _state_label(STATE_NAMES[state])
-                    show_cb = row_idx == 0 and col_idx == len(row) - 1
-                    if cached_panel_builder is not None:
-                        # Fast path: fetch the cached base figure (no seeds)
-                        # and deep-copy before adding the per-render overlay
-                        # so the cache is never mutated.
-                        base = cached_panel_builder(state, show_cb)
-                        fig = copy.deepcopy(base)
-                        if seed_fips:
-                            valid = set(flu[flu["state"] == state]["fips_str"].values)
-                            local_seeds = [f for f in seed_fips if f in valid]
-                            if local_seeds:
-                                fig = _add_seed_overlay(fig, geojson, local_seeds)
-                    else:
-                        state_df = flu[flu["state"] == state]
-                        fig = build_single_state_choropleth(
-                            state_df,
-                            geojson,
-                            show_colorbar=show_cb,
-                            seed_fips=seed_fips,
-                        )
-                    chart_key = f"outbreak_baseline_{state}"
-                    event = st.plotly_chart(
-                        fig,
-                        use_container_width=True,
-                        config=_BASELINE_CONFIG,
-                        on_select="rerun",
-                        selection_mode="points",
-                        key=chart_key,
-                    )
-                    _capture_click_seed(event, chart_key)
+
+    event = st.plotly_chart(
+        fig,
+        use_container_width=True,
+        config=_BASELINE_CONFIG,
+        on_select="rerun",
+        selection_mode="points",
+        key="outbreak_baseline_single",
+    )
+    _capture_click_seed(event, "outbreak_baseline_single")
 
     _ct_warning(focused_state, selected_states)
-    caption = _focus_caption(focused_state, selected_states)
-    if caption:
-        st.markdown(f'<p class="modr-caption">{caption}</p>', unsafe_allow_html=True)
     n_seeds = len(seed_fips) if seed_fips else 0
     seed_note = (
         f"<b>{n_seeds}</b> outbreak "
@@ -307,8 +246,8 @@ def _render_outbreak_tab_baseline(
         '<p class="modr-caption">Predicted relative outbreak vulnerability '
         "per county (XGBoost output). "
         f"{seed_note}"
-        "<em>Click any county to queue it as a seed</em> — clicks are "
-        "lightweight (no SIR recompute). They take effect the next time you "
+        "<em>Click any county to queue it as a seed</em> — clicks update the "
+        "overlay only (no SIR recompute). They take effect the next time you "
         "press <b>Run scenario</b>. Each seeded county then starts the SIR "
         "simulation with <b>500 initial infections</b>; every other county "
         "starts at 0. The disease spreads from those seeds via per-county "
@@ -365,7 +304,7 @@ def render_baseline(
     vax_boost_pp: int = 0,
     strategy_label: str = "uniform",
     seed_fips: list | tuple | None = None,
-    cached_panel_builder=None,
+    cached_base_figure=None,
 ) -> None:
     tab_outbreak, tab_vax = st.tabs(["Outbreak vulnerability", "Vaccination coverage"])
     with tab_outbreak:
@@ -375,7 +314,7 @@ def render_baseline(
             selected_states,
             focused_state,
             seed_fips=seed_fips,
-            cached_panel_builder=cached_panel_builder,
+            cached_base_figure=cached_base_figure,
         )
     with tab_vax:
         _render_vaccination_tab(

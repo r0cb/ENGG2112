@@ -101,32 +101,32 @@ def _top_3_default_fips() -> tuple[str, ...]:
 
 
 @st.cache_resource(show_spinner=False)
-def _cached_outbreak_panel_figure(
-    state: str,
+def _cached_outbreak_base_figure(
     baseline_overall: int,
     baseline_per_state: tuple,
-    show_colorbar: bool,
+    selected_states_tuple: tuple,
+    focused_state: str | None,
 ):
-    """Cache the static Outbreak Vulnerability choropleth per state.
+    """Cache the single big USA-scoped Outbreak Vulnerability choropleth
+    (no seed overlay). Caller deep-copies before adding the seed overlay
+    so the cache stays immutable.
 
-    The base figure (without the seed-overlay trace) depends only on:
-    - the state's slice of the flu DataFrame (P(outbreak) values + identities)
-    - the user's vaccination-baseline assumptions (don't affect this map but
-      caching by them is cheap)
-    - whether the colourbar is shown
-
-    Returning the live Plotly figure from cache means we skip the expensive
-    px.choropleth call on every click. The caller deep-copies before adding
-    the seed overlay so the cached figure is never mutated.
+    Cache key includes the selected states and focused state because those
+    actually change the rendered geography; baseline values are folded in
+    even though they don't affect this map, so the key stays stable across
+    baseline edits.
     """
-    from src.maps import build_single_state_choropleth
+    from src.maps import build_baseline_choropleth
     flu = apply_baseline(
         load_flu_df(), baseline_overall, dict(baseline_per_state)
     )
-    state_df = flu[flu["state"] == state]
     geojson = load_geojson()
-    return build_single_state_choropleth(
-        state_df, geojson, show_colorbar=show_colorbar, seed_fips=None
+    return build_baseline_choropleth(
+        flu,
+        geojson,
+        list(selected_states_tuple),
+        focused_state=focused_state,
+        seed_fips=None,
     )
 
 
@@ -423,17 +423,15 @@ def main() -> None:
             # apply_seed would use (the top-3 default).
             display_seeds = list(_top_3_default_fips())
 
-        # Build a per-render closure that hits the cached figure factory.
-        # On click reruns, the (state, baseline, ...) key doesn't change so
-        # we get the cached figure back instead of re-running px.choropleth
-        # for every panel.
-        def _cached_panel_builder(state: str, show_colorbar: bool):
-            return _cached_outbreak_panel_figure(
-                state,
-                baseline_overall,
-                baseline_per_state_tuple,
-                show_colorbar,
-            )
+        # Single cached base figure (whole USA, all selected states) — on
+        # click reruns the key doesn't change so we deep-copy from cache
+        # instead of rebuilding px.choropleth.
+        cached_base = _cached_outbreak_base_figure(
+            baseline_overall,
+            baseline_per_state_tuple,
+            tuple(selected),
+            current_focus,
+        )
 
         map_panel.render_baseline(
             flu_with_v_eff,
@@ -443,7 +441,7 @@ def main() -> None:
             vax_boost_pp=controls["vax_boost_pp"],
             strategy_label=strategy_label,
             seed_fips=display_seeds,
-            cached_panel_builder=_cached_panel_builder,
+            cached_base_figure=cached_base,
         )
         if st.session_state.pop("_just_reset", False):
             st.caption("Viewing baseline scenario (no intervention applied).")

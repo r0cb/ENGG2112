@@ -113,6 +113,64 @@ def _ordered_states(selected_states: list) -> list:
     return [s for s in STATES if s in selected_states]
 
 
+def build_vaccination_choropleth(
+    flu: pd.DataFrame,
+    geojson: dict,
+    selected_states: list,
+    focused_state: str | None = None,
+    range_color: tuple[float, float] | None = None,
+) -> go.Figure:
+    """Single big USA-scoped green choropleth of effective vaccination
+    coverage (V_eff) across all selected states. Mirrors the structure of
+    build_baseline_choropleth so the two tabs render symmetrically; only
+    the colour scheme and metric column differ."""
+    state_order = _ordered_states(selected_states)
+    if focused_state and focused_state in state_order:
+        state_order = [focused_state]
+    df = flu[flu["state"].isin(state_order)].copy()
+    if range_color is None:
+        range_color = (0.0, 1.0)
+
+    fig = px.choropleth(
+        df,
+        geojson=geojson,
+        locations="fips_str",
+        color="V_eff",
+        color_continuous_scale=VAX_COLOR_SEQUENCE,
+        range_color=list(range_color),
+        scope="usa",
+        hover_name="county",
+        hover_data={
+            "state": True,
+            "V0": ":.1%",
+            "V_eff": ":.1%",
+            "p_outbreak": ":.3f",
+            "fips_str": False,
+        },
+        labels={
+            "V_eff": "Coverage",
+            "V0": "Baseline",
+            "p_outbreak": "P(outbreak)",
+        },
+    )
+    fig.update_traces(marker_line_color=BG, marker_line_width=0.5)
+    fig = _apply_scientific_theme(fig)
+    fig.update_layout(
+        coloraxis_colorbar=dict(
+            title=dict(
+                text="% vaccinated",
+                font=dict(color=MUTED, family=FONT_STACK, size=11),
+            ),
+            thickness=10,
+            tickfont=dict(size=11, color=MUTED, family=FONT_STACK),
+            outlinewidth=0,
+            tickformat=".0%",
+        ),
+        height=560,
+    )
+    return fig
+
+
 def build_single_state_vaccination_choropleth(
     state_df: pd.DataFrame,
     geojson: dict,
