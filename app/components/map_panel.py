@@ -201,6 +201,16 @@ def _capture_click_seed(event, source_key: str) -> None:
     if not added:
         return
 
+    # Drop fips that aren't in our 141-county dataset (e.g. an off-by-geojson
+    # click on a CT old-county FIPS that we don't model). Without this the
+    # invalid fips silently falls back to top-3 inside apply_seed.
+    from src.data_loader import load_flu_df
+    valid_set = set(load_flu_df()["fips_str"].astype(str).values)
+    added = [f for f in added if f in valid_set]
+    if not added:
+        st.session_state["_seed_invalid_click"] = True
+        return
+
     current = list(st.session_state.get("seed_counties_staged", []))
     for fips in added:
         if fips not in current:

@@ -306,6 +306,34 @@ button[data-testid$="-pill_DE"]:disabled {
     font-style: italic;
 }
 
+/* Diagnostic strip showing active SIR seeds vs queued */
+.modr-seed-strip {
+    margin-bottom: 0.85rem;
+    padding: 8px 12px;
+    background: #FAFAFA;
+    border-left: 3px solid #3A7D5C;
+    font-size: 0.75rem;
+    color: #1A1A1A;
+    line-height: 1.4;
+}
+.modr-seed-strip-label {
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-size: 0.65rem;
+    color: #6B6B6B;
+    font-weight: 500;
+}
+.modr-seed-strip-queued {
+    color: #B43A1E;
+}
+.modr-seed-strip-value {
+    color: #1A1A1A;
+}
+.modr-seed-strip-sep {
+    color: #C5C5C5;
+    margin: 0 0.4rem;
+}
+
 /* Seed chip list in sidebar */
 .modr-seed-list-label {
     font-size: 0.7rem;

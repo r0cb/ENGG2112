@@ -260,6 +260,58 @@ def main() -> None:
             st.session_state["focused_state"] = new_focus
         st.rerun()
 
+    # Diagnostic strip: makes the "what's queued vs what's in the SIR" state
+    # visible at all times, so the user can verify whether their clicks are
+    # actually reaching the simulation. Especially important for debugging
+    # mismatches between map overlays and SIR behaviour.
+    flu_for_label = load_flu_df()
+    fips_to_label = {
+        row["fips_str"]: f"{row['state']} · {row['county']}"
+        for _, row in flu_for_label.iterrows()
+    }
+    sim_seeds_for_strip = (
+        list(st.session_state.get("active_params", {}).get("seed_fips", ()))
+        if has_scenario
+        else _effective_seed_fips(flu)
+    )
+    sim_seeds_labels = [fips_to_label.get(f, f) for f in sim_seeds_for_strip]
+    sim_seeds_text = (
+        ", ".join(sim_seeds_labels) if sim_seeds_labels else "top-3 default"
+    )
+
+    queued_seeds_text = ""
+    if controls["seed_mode"] == "choose":
+        queued_labels = [fips_to_label.get(f, f) for f in staged_seeds]
+        if sorted(staged_seeds) != sorted(
+            st.session_state.get("seed_counties_committed", []) or []
+        ):
+            queued_seeds_text = (
+                ", ".join(queued_labels) if queued_labels else "(none)"
+            )
+
+    if st.session_state.pop("_seed_invalid_click", False):
+        st.warning(
+            "That click landed outside the 141-county dataset (likely a "
+            "Connecticut planning region the model doesn't cover). Try a "
+            "different county."
+        )
+
+    diag_html = (
+        '<div class="modr-seed-strip">'
+        '<span class="modr-seed-strip-label">Seeds active in this SIR run:</span> '
+        f'<span class="modr-seed-strip-value">{sim_seeds_text}</span>'
+    )
+    if queued_seeds_text:
+        diag_html += (
+            ' <span class="modr-seed-strip-sep">·</span> '
+            '<span class="modr-seed-strip-label modr-seed-strip-queued">'
+            "Queued for next Run:"
+            "</span> "
+            f'<span class="modr-seed-strip-value">{queued_seeds_text}</span>'
+        )
+    diag_html += "</div>"
+    st.markdown(diag_html, unsafe_allow_html=True)
+
     metrics_component.render(
         sim_metrics,
         baseline_metrics if has_scenario else None,
@@ -278,7 +330,17 @@ def main() -> None:
         )
         frame_days = stride * 0.5
         long_df = build_animation_frame(sim, flu, stride=stride)
-        effective_seeds = _effective_seed_fips(flu)
+        # Use the exact seeds the SIR was run with, recorded in active_params,
+        # so the overlay is guaranteed to match the SIR outcome even if the
+        # user has since changed staged seeds without re-running.
+        active_seeds_for_overlay = (
+            list(st.session_state["active_params"].get("seed_fips") or [])
+        )
+        effective_seeds = (
+            active_seeds_for_overlay
+            if active_seeds_for_overlay
+            else _effective_seed_fips(flu)
+        )
         map_panel.render_animated(
             long_df,
             geojson,
