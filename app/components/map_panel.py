@@ -186,12 +186,15 @@ def _render_outbreak_tab_baseline(
     geojson: dict,
     selected_states: list,
     focused_state: str | None,
+    seed_fips: list | tuple | None = None,
 ) -> None:
     state_order = _ordered_states(selected_states)
     is_focused = focused_state and focused_state in state_order
 
     if is_focused or len(state_order) <= 1:
-        fig = build_baseline_choropleth(flu, geojson, selected_states, focused_state)
+        fig = build_baseline_choropleth(
+            flu, geojson, selected_states, focused_state, seed_fips=seed_fips
+        )
         event = st.plotly_chart(
             fig,
             use_container_width=True,
@@ -211,7 +214,10 @@ def _render_outbreak_tab_baseline(
                     state_df = flu[flu["state"] == state]
                     show_cb = row_idx == 0 and col_idx == len(row) - 1
                     fig = build_single_state_choropleth(
-                        state_df, geojson, show_colorbar=show_cb
+                        state_df,
+                        geojson,
+                        show_colorbar=show_cb,
+                        seed_fips=seed_fips,
                     )
                     chart_key = f"outbreak_baseline_{state}"
                     event = st.plotly_chart(
@@ -228,9 +234,16 @@ def _render_outbreak_tab_baseline(
     caption = _focus_caption(focused_state, selected_states)
     if caption:
         st.markdown(f'<p class="modr-caption">{caption}</p>', unsafe_allow_html=True)
+    n_seeds = len(seed_fips) if seed_fips else 0
+    seed_note = (
+        f"Outbreak seeds (green outline): {n_seeds} "
+        f"{'county' if n_seeds == 1 else 'counties'} marked. "
+        if n_seeds
+        else ""
+    )
     st.markdown(
         '<p class="modr-caption">Predicted relative outbreak vulnerability '
-        "per county (XGBoost output). "
+        f"per county (XGBoost output). {seed_note}"
         "<em>Tip: click any county to set it as an outbreak seed.</em></p>",
         unsafe_allow_html=True,
     )
@@ -243,18 +256,21 @@ def _render_outbreak_tab_animated(
     horizon: int,
     frame_days: float,
     focused_state: str | None,
+    seed_fips: list | tuple | None = None,
 ) -> None:
     state_order = _ordered_states(selected_states)
     is_focused = focused_state and focused_state in state_order
 
     if is_focused or len(state_order) <= 1:
         fig = build_animated_choropleth(
-            long_df, geojson, selected_states, focused_state
+            long_df, geojson, selected_states, focused_state, seed_fips=seed_fips
         )
         st.plotly_chart(fig, use_container_width=True, config=_ANIMATED_CONFIG)
     else:
         scoped = long_df[long_df["state"].isin(state_order)]
-        fig = build_synced_grid_animated_choropleth(scoped, geojson, state_order)
+        fig = build_synced_grid_animated_choropleth(
+            scoped, geojson, state_order, seed_fips=seed_fips
+        )
         st.plotly_chart(fig, use_container_width=True, config=_ANIMATED_CONFIG)
 
     _ct_warning(focused_state, selected_states)
@@ -279,10 +295,13 @@ def render_baseline(
     focused_state: str | None = None,
     vax_boost_pp: int = 0,
     strategy_label: str = "uniform",
+    seed_fips: list | tuple | None = None,
 ) -> None:
     tab_outbreak, tab_vax = st.tabs(["Outbreak vulnerability", "Vaccination coverage"])
     with tab_outbreak:
-        _render_outbreak_tab_baseline(flu, geojson, selected_states, focused_state)
+        _render_outbreak_tab_baseline(
+            flu, geojson, selected_states, focused_state, seed_fips=seed_fips
+        )
     with tab_vax:
         _render_vaccination_tab(
             flu, geojson, selected_states, focused_state, vax_boost_pp, strategy_label
@@ -299,11 +318,18 @@ def render_animated(
     flu_for_vax: pd.DataFrame | None = None,
     vax_boost_pp: int = 0,
     strategy_label: str = "uniform",
+    seed_fips: list | tuple | None = None,
 ) -> None:
     tab_outbreak, tab_vax = st.tabs(["Outbreak progression", "Vaccination coverage"])
     with tab_outbreak:
         _render_outbreak_tab_animated(
-            long_df, geojson, selected_states, horizon, frame_days, focused_state
+            long_df,
+            geojson,
+            selected_states,
+            horizon,
+            frame_days,
+            focused_state,
+            seed_fips=seed_fips,
         )
     with tab_vax:
         if flu_for_vax is None:

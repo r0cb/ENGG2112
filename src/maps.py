@@ -14,11 +14,39 @@ from src.constants import (
     COLOR_SEQUENCE,
     FONT_STACK,
     MUTED,
+    POSITIVE,
     STATE_NAMES,
     STATES,
     TEXT,
     VAX_COLOR_SEQUENCE,
 )
+
+
+def _add_seed_overlay(
+    fig: go.Figure,
+    geojson: dict,
+    seed_fips: list | tuple | None,
+) -> go.Figure:
+    """Overlay a transparent choropleth with a thick green outline on the
+    given seed counties. Used to mark outbreak-origin counties on the
+    Outbreak Vulnerability map (both single-state and per-panel grid)."""
+    if not seed_fips:
+        return fig
+    seeds = [str(f) for f in seed_fips]
+    fig.add_trace(
+        go.Choropleth(
+            geojson=geojson,
+            locations=seeds,
+            z=[1] * len(seeds),
+            colorscale=[[0, "rgba(0,0,0,0)"], [1, "rgba(0,0,0,0)"]],
+            showscale=False,
+            marker_line_color=POSITIVE,
+            marker_line_width=3.5,
+            hovertemplate="<b>Outbreak seed</b><br>FIPS %{location}<extra></extra>",
+            name="Seeds",
+        )
+    )
+    return fig
 
 
 def _apply_scientific_theme(fig: go.Figure) -> go.Figure:
@@ -165,6 +193,7 @@ def build_single_state_choropleth(
     geojson: dict,
     show_colorbar: bool = False,
     height: int = 280,
+    seed_fips: list | tuple | None = None,
 ) -> go.Figure:
     """Small choropleth focused on a single state for use inside a 2x2 grid
     layout. Each chart is independent — Plotly fitbounds='locations' centres
@@ -212,6 +241,14 @@ def build_single_state_choropleth(
         )
     else:
         fig.update_layout(coloraxis_showscale=False)
+    # Overlay any seed counties with a thick green outline so the user can
+    # see exactly where the SIR will start the outbreak.
+    if seed_fips:
+        # Only mark seeds that belong to this state's data (so a NY seed
+        # doesn't decorate the PA panel and vice versa).
+        valid = set(state_df["fips_str"].values)
+        local_seeds = [f for f in seed_fips if f in valid]
+        fig = _add_seed_overlay(fig, geojson, local_seeds)
     return fig
 
 
@@ -219,6 +256,7 @@ def build_synced_grid_animated_choropleth(
     long_df: pd.DataFrame,
     geojson: dict,
     state_order: list,
+    seed_fips: list | tuple | None = None,
 ) -> go.Figure:
     """One figure containing a 2x2 (or 1x2 / 1x1) grid of per-state animated
     choropleths driven by a single shared timeline slider.
@@ -401,6 +439,10 @@ def build_synced_grid_animated_choropleth(
         ann.font = dict(color=TEXT, family=FONT_STACK, size=14)
         ann.yshift = 4
 
+    if seed_fips:
+        # The overlay marks the outbreak origin on every animation frame.
+        fig = _add_seed_overlay(fig, geojson, list(seed_fips))
+
     return fig
 
 
@@ -472,6 +514,7 @@ def build_baseline_choropleth(
     geojson: dict,
     selected_states: list,
     focused_state: str | None = None,
+    seed_fips: list | tuple | None = None,
 ) -> go.Figure:
     """Big single-state choropleth used by the focused (one-state) view.
 
@@ -516,6 +559,10 @@ def build_baseline_choropleth(
         ),
         height=560,
     )
+    if seed_fips:
+        valid = set(df["fips_str"].values)
+        local_seeds = [f for f in seed_fips if f in valid]
+        fig = _add_seed_overlay(fig, geojson, local_seeds)
     return fig
 
 
@@ -524,6 +571,7 @@ def build_animated_choropleth(
     geojson: dict,
     selected_states: list,
     focused_state: str | None = None,
+    seed_fips: list | tuple | None = None,
 ) -> go.Figure:
     """Big single-state animated SIR choropleth used by the focused view.
 
@@ -578,6 +626,8 @@ def build_animated_choropleth(
         height=560,
     )
     fig = _style_animation_controls(fig)
+    if seed_fips:
+        fig = _add_seed_overlay(fig, geojson, list(seed_fips))
     return fig
 
 

@@ -82,6 +82,14 @@ def _flu_with_baseline_and_seed(
     return flu
 
 
+def _effective_seed_fips(flu_df) -> list[str]:
+    """The list of counties the SIR is actually seeded in. Mirrors the
+    logic in apply_seed: the rows where I_init > 0 after apply_seed runs.
+    Used by the map overlay so the visual marker is always correct
+    regardless of whether the user is in default or choose mode."""
+    return flu_df.loc[flu_df["I_init"] > 0, "fips_str"].tolist()
+
+
 @st.cache_data(show_spinner=False)
 def _baseline_run(
     horizon: int,
@@ -249,9 +257,16 @@ def main() -> None:
 
     if has_scenario:
         horizon = st.session_state["active_params"]["horizon"]
-        stride = 4 if horizon <= 180 else (6 if horizon <= 270 else 8)
+        stride = (
+            4 if horizon <= 180
+            else 6 if horizon <= 270
+            else 8 if horizon <= 365
+            else 12 if horizon <= 540
+            else 16
+        )
         frame_days = stride * 0.5
         long_df = build_animation_frame(sim, flu, stride=stride)
+        effective_seeds = _effective_seed_fips(flu)
         map_panel.render_animated(
             long_df,
             geojson,
@@ -262,8 +277,10 @@ def main() -> None:
             flu_for_vax=flu_with_v_eff,
             vax_boost_pp=controls["vax_boost_pp"],
             strategy_label=strategy_label,
+            seed_fips=effective_seeds,
         )
     else:
+        effective_seeds = _effective_seed_fips(flu)
         map_panel.render_baseline(
             flu_with_v_eff,
             geojson,
@@ -271,6 +288,7 @@ def main() -> None:
             focused_state=current_focus,
             vax_boost_pp=controls["vax_boost_pp"],
             strategy_label=strategy_label,
+            seed_fips=effective_seeds,
         )
         if st.session_state.pop("_just_reset", False):
             st.caption("Viewing baseline scenario (no intervention applied).")

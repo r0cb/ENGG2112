@@ -176,33 +176,50 @@ def render() -> dict:
             label_visibility="collapsed",
         )
 
-        seed_counties: list[str] = []
+        seed_counties: list[str] = list(st.session_state.get("seed_counties", []))
         if seed_mode == SEED_MODE_CHOOSE:
             flu = load_flu_df()
-            option_fips: list[str] = []
-            label_lookup: dict[str, str] = {}
-            for state in STATES:
-                state_df = flu[flu["state"] == state].sort_values("county")
-                for _, row in state_df.iterrows():
-                    f = row["fips_str"]
-                    option_fips.append(f)
-                    label_lookup[f] = f"{STATE_NAMES[state]} — {row['county']}"
-            seed_counties = st.multiselect(
-                "Seed counties",
-                options=option_fips,
-                format_func=lambda f: label_lookup.get(f, f),
-                key="seed_counties",
-                help=(
-                    "Pick one or more counties where the outbreak begins. "
-                    "You can also click a county on the Outbreak Vulnerability "
-                    "map to add it as a seed."
-                ),
-            )
-            if not seed_counties:
-                st.caption(
-                    "No seeds selected yet — falls back to the top-3 default. "
-                    "Click any county on the map to add one."
+            label_lookup = {
+                row["fips_str"]: f"{STATE_NAMES[row['state']]} — {row['county']}"
+                for _, row in flu.iterrows()
+            }
+            if seed_counties:
+                # Show currently-seeded counties as a list with per-row remove
+                # buttons. The seed list is driven entirely by map clicks now.
+                st.markdown(
+                    '<div class="modr-seed-list-label">CURRENTLY SEEDED</div>',
+                    unsafe_allow_html=True,
                 )
+                for fips in list(seed_counties):
+                    label = label_lookup.get(fips, fips)
+                    col_label, col_remove = st.columns([0.78, 0.22])
+                    col_label.markdown(
+                        f'<div class="modr-seed-chip">{label}</div>',
+                        unsafe_allow_html=True,
+                    )
+                    if col_remove.button(
+                        "✕", key=f"seed_remove_{fips}", help=f"Remove {label}"
+                    ):
+                        new_list = [f for f in seed_counties if f != fips]
+                        st.session_state["seed_counties"] = new_list
+                        st.rerun()
+                if st.button(
+                    "Clear all seeds", key="seed_clear_all", use_container_width=True
+                ):
+                    st.session_state["seed_counties"] = []
+                    st.rerun()
+                seed_counties = list(st.session_state.get("seed_counties", []))
+            else:
+                st.caption(
+                    "No seeds selected yet — click any county on the Outbreak "
+                    "Vulnerability map to add one. Falls back to the top-3 "
+                    "default until you do."
+                )
+        else:
+            # Default mode: don't carry stale "Choose" seeds into the SIR. The
+            # actual top-3 fips are highlighted on the map via the seed
+            # overlay; the SIR uses apply_seed's fallback.
+            seed_counties = []
 
         st.write("")
         run_clicked = st.button(

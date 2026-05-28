@@ -36,8 +36,8 @@ SLIDER_MOB = {"min": 0.0, "max": 1.0, "step": 0.05, "default": 1.0}
 # override this overall, or per-state, from the sidebar.
 SLIDER_VAX_BASELINE = {"min": 0, "max": 100, "step": 1, "default": 59}
 VACCINATION_BASELINE_DEFAULT = 59
-HORIZON_OPTIONS = [90, 180, 270, 365]
-HORIZON_DEFAULT = 180
+HORIZON_OPTIONS = [180, 270, 365, 540, 730]
+HORIZON_DEFAULT = 365
 
 ALLOCATION_UNIFORM = "uniform"
 # Legacy constant name — the user-visible label is "Vulnerability-weighted
@@ -70,7 +70,7 @@ FONT_STACK = "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif
 APP_TITLE = "MODR — Respiratory Virus Vulnerability Explorer"
 APP_SUBTITLE = (
     "Counties of New York, Pennsylvania, Connecticut, Delaware. "
-    "Hypothetical scenarios, 90-to-365-day SIR simulation."
+    "Hypothetical scenarios, 180-day to 2-year SIR simulation."
 )
 SIDEBAR_FOOTER = "ENGG2112 · 141 counties · XGBoost + SIR"
 APP_FOOTER = "ENGG2112 Project MODR · University of Sydney · 2026"

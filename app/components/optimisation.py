@@ -269,6 +269,15 @@ def render_strategy_comparison(
         '<div class="modr-cmp-header">Strategy comparison at this budget</div>'
         f'<div class="modr-cmp-cards">{cards}</div>'
         f'<div class="modr-cmp-prose">{prose}</div>'
+        '<div class="modr-cmp-math">'
+        "<b>How these numbers are computed.</b> "
+        "Each card runs the full SIR over the chosen horizon with that "
+        "strategy's per-county boost. <b>−X.X% vs baseline</b> = "
+        "(baseline cases − strategy cases) / baseline cases. <b>Y.Y% "
+        "improvement vs the alternative</b> = (alt-strategy cases − chosen-"
+        "strategy cases) / alt-strategy cases. Baseline = no intervention "
+        "(0 budget, full mobility) at the current vaccination baseline."
+        "</div>"
         "</div>",
         unsafe_allow_html=True,
     )
