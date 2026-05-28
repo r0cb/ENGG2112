@@ -11,11 +11,14 @@ not animate, since vaccination state in the SIR is set at t=0.
 
 from __future__ import annotations
 
+import copy
+
 import pandas as pd
 import streamlit as st
 
 from src.constants import STATE_NAMES, STATES
 from src.maps import (
+    _add_seed_overlay,
     build_animated_choropleth,
     build_baseline_choropleth,
     build_single_state_choropleth,
@@ -226,7 +229,15 @@ def _render_outbreak_tab_baseline(
     selected_states: list,
     focused_state: str | None,
     seed_fips: list | tuple | None = None,
+    cached_panel_builder=None,
 ) -> None:
+    """Render the static outbreak vulnerability map.
+
+    cached_panel_builder, if provided, is a function (state, show_colorbar) →
+    base plotly figure (no seed overlay). Used to skip the expensive
+    px.choropleth call on every rerun; map_panel deep-copies the cached
+    figure and applies the per-render seed overlay on top.
+    """
     state_order = _ordered_states(selected_states)
     is_focused = focused_state and focused_state in state_order
 
@@ -250,14 +261,26 @@ def _render_outbreak_tab_baseline(
             for col_idx, (col, state) in enumerate(zip(cols, row)):
                 with col:
                     _state_label(STATE_NAMES[state])
-                    state_df = flu[flu["state"] == state]
                     show_cb = row_idx == 0 and col_idx == len(row) - 1
-                    fig = build_single_state_choropleth(
-                        state_df,
-                        geojson,
-                        show_colorbar=show_cb,
-                        seed_fips=seed_fips,
-                    )
+                    if cached_panel_builder is not None:
+                        # Fast path: fetch the cached base figure (no seeds)
+                        # and deep-copy before adding the per-render overlay
+                        # so the cache is never mutated.
+                        base = cached_panel_builder(state, show_cb)
+                        fig = copy.deepcopy(base)
+                        if seed_fips:
+                            valid = set(flu[flu["state"] == state]["fips_str"].values)
+                            local_seeds = [f for f in seed_fips if f in valid]
+                            if local_seeds:
+                                fig = _add_seed_overlay(fig, geojson, local_seeds)
+                    else:
+                        state_df = flu[flu["state"] == state]
+                        fig = build_single_state_choropleth(
+                            state_df,
+                            geojson,
+                            show_colorbar=show_cb,
+                            seed_fips=seed_fips,
+                        )
                     chart_key = f"outbreak_baseline_{state}"
                     event = st.plotly_chart(
                         fig,
@@ -342,11 +365,17 @@ def render_baseline(
     vax_boost_pp: int = 0,
     strategy_label: str = "uniform",
     seed_fips: list | tuple | None = None,
+    cached_panel_builder=None,
 ) -> None:
     tab_outbreak, tab_vax = st.tabs(["Outbreak vulnerability", "Vaccination coverage"])
     with tab_outbreak:
         _render_outbreak_tab_baseline(
-            flu, geojson, selected_states, focused_state, seed_fips=seed_fips
+            flu,
+            geojson,
+            selected_states,
+            focused_state,
+            seed_fips=seed_fips,
+            cached_panel_builder=cached_panel_builder,
         )
     with tab_vax:
         _render_vaccination_tab(
