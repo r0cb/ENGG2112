@@ -90,6 +90,16 @@ def _effective_seed_fips(flu_df) -> list[str]:
     return flu_df.loc[flu_df["I_init"] > 0, "fips_str"].tolist()
 
 
+@st.cache_data(show_spinner=False)
+def _top_3_default_fips() -> tuple[str, ...]:
+    """The three counties with the highest p_outbreak score. Used to
+    display the default-mode overlay regardless of what the SIR is
+    currently committed to."""
+    flu = load_flu_df()
+    top3 = flu.nlargest(3, "p_outbreak")["fips_str"].tolist()
+    return tuple(top3)
+
+
 @st.cache_resource(show_spinner=False)
 def _cached_outbreak_panel_figure(
     state: str,
@@ -188,6 +198,24 @@ def main() -> None:
     # SIR actually uses, only updated when Run scenario is clicked. This
     # separation means each click doesn't force a baseline_run recompute.
     staged_seeds = tuple(sorted(controls.get("seed_counties_staged") or ()))
+
+    # If the user has switched back to Top-3 default mode, treat that as a
+    # reset: drop any committed seeds so the next baseline / scenario uses
+    # the original top-3 fallback. Also clear staged so the chip list
+    # disappears.
+    if controls["seed_mode"] == "default":
+        if st.session_state.get("seed_counties_committed"):
+            st.session_state["seed_counties_committed"] = []
+        if st.session_state.get("seed_counties_staged"):
+            st.session_state["seed_counties_staged"] = []
+        # If a scenario was active, the overlay on the animated tab should
+        # also flip back to top-3; clear the active_params seed list so the
+        # overlay falls back to _effective_seed_fips(flu) (which will be the
+        # top-3 default since committed is now empty).
+        if "active_params" in st.session_state:
+            st.session_state["active_params"]["seed_fips"] = ()
+        staged_seeds = ()
+
     committed_seeds = tuple(
         sorted(st.session_state.get("seed_counties_committed", []) or ())
     )
@@ -384,10 +412,16 @@ def main() -> None:
             seed_fips=effective_seeds,
         )
     else:
-        if controls["seed_mode"] == "choose" and staged_seeds:
+        if controls["seed_mode"] == "default":
+            # Mode = default → overlay is the top-3 regardless of any old
+            # committed state. We already cleared committed/staged above.
+            display_seeds = list(_top_3_default_fips())
+        elif staged_seeds:
             display_seeds = list(staged_seeds)
         else:
-            display_seeds = _effective_seed_fips(flu)
+            # Choose mode but nothing queued yet — fall back to whatever
+            # apply_seed would use (the top-3 default).
+            display_seeds = list(_top_3_default_fips())
 
         # Build a per-render closure that hits the cached figure factory.
         # On click reruns, the (state, baseline, ...) key doesn't change so
