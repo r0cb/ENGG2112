@@ -17,7 +17,7 @@ This tool explores hypothetical respiratory virus outbreak scenarios across
 counties in New York, Pennsylvania, Connecticut, and Delaware. The underlying
 machine learning model predicts a relative vulnerability ranking based on
 demographic features; the SIR simulation runs that ranking forward through a
-hypothetical 90 — 365-day window to show how policy interventions would change
+hypothetical 180 — 730-day window to show how policy interventions would change
 the spatial spread. **It is not a real-world forecasting system.**
 
 ### The machine learning model
@@ -59,9 +59,10 @@ spatial coupling along the county-adjacency graph:
   the regional mean used in the Variant-C calibration). The **Per-state
   baselines** expander lets you override individual states. The **Additional
   vaccination budget** slider adds percentage points on top of the baseline
-- Ten initial infections are seeded in the three counties with the highest
-  predicted vulnerability; the epidemic spreads from there through adjacency
-- Simulation horizon: 90, 180, 270, or 365 days, evaluated at 0.5-day
+- 500 initial infections are seeded in each origin county at Day 0 (see
+  *Outbreak seeding* below for the two ways to choose those counties); the
+  epidemic spreads from there through adjacency
+- Simulation horizon: 180, 270, 365, 540, or 730 days, evaluated at 0.5-day
   resolution and downsampled to 2-4 day frames for the animation
 
 ### Outbreak seeding
