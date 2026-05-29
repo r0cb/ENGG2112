@@ -31,6 +31,17 @@ html, body, [class*="css"], .stApp {
     background: #FAFAFA;
     border-right: 1px solid #E5E5E5;
 }
+/* Force the open sidebar to honour its expanded geometry. Streamlit's
+   emotion class for the collapsed state pins min/max-width to ~0.9px;
+   when the user re-opens the sidebar, Streamlit flips aria-expanded
+   back to "true" and sets an inline width, but does NOT always swap the
+   emotion class. Result: the sidebar reports itself open but renders at
+   ~1px, with no way to expand it again. This override matches the
+   open-state attribute and restores a usable width. */
+section[data-testid="stSidebar"][aria-expanded="true"] {
+    min-width: 21rem !important;
+    max-width: 21rem !important;
+}
 [data-testid="stSidebar"] > div:first-child { padding-top: 1.5rem; }
 [data-testid="stSidebar"] .stMarkdown,
 [data-testid="stSidebar"] label,
@@ -645,6 +656,10 @@ h3 { font-size: 1.05rem; }
     .modr-title { font-size: 1.2rem; line-height: 1.2; }
     .modr-metric-row { grid-template-columns: 1fr; }
     .modr-metric .value { font-size: 1.55rem; }
-    /* Slim the sidebar so it doesn't crowd the main view when expanded. */
-    [data-testid="stSidebar"] { min-width: 75vw !important; }
+    /* On mobile, give the open sidebar more width so controls fit, and
+       allow it to extend past 21rem (overriding the desktop clamp above). */
+    section[data-testid="stSidebar"][aria-expanded="true"] {
+        min-width: 75vw !important;
+        max-width: 100vw !important;
+    }
 }
