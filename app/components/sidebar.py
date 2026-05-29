@@ -25,6 +25,32 @@ SEED_MODE_CHOOSE = "choose"
 def render() -> dict:
     """Render sidebar widgets and return current control values."""
     with st.sidebar:
+        # Custom collapse toggle. Streamlit's built-in sidebar collapse
+        # leaves the collapsed-state emotion CSS (max-width: 0.9px) applied
+        # after the user re-opens it, leaving the sidebar stuck closed with
+        # no visible expand button. We replace that mechanism entirely by:
+        #  - hiding Streamlit's built-in collapse button (in main.css),
+        #  - rendering our own toggle as the first sidebar element,
+        #  - tracking collapsed state in session_state["sidebar_collapsed"],
+        #  - injecting state-dependent CSS in streamlit_app._apply_sidebar_state
+        #    that narrows the sidebar and hides every widget except this one.
+        # The widgets below this button keep mounting either way, so their
+        # session_state values stay valid for the rest of the app even when
+        # the sidebar is visually collapsed.
+        collapsed = st.session_state.get("sidebar_collapsed", False)
+        toggle_label = "▶" if collapsed else "◀  Hide controls"
+        toggle_help = "Open the policy controls sidebar" if collapsed else (
+            "Collapse the sidebar to a thin rail; click ▶ to reopen"
+        )
+        if st.button(
+            toggle_label,
+            key="modr_sidebar_toggle",
+            help=toggle_help,
+            use_container_width=True,
+        ):
+            st.session_state["sidebar_collapsed"] = not collapsed
+            st.rerun()
+
         st.markdown(
             '<div class="modr-section-label">Policy controls</div>',
             unsafe_allow_html=True,

@@ -65,6 +65,45 @@ def _inject_css() -> None:
     st.markdown(f"<style>{css}</style>", unsafe_allow_html=True)
 
 
+def _apply_sidebar_collapse_state() -> None:
+    """Inject state-dependent CSS so the custom sidebar toggle in
+    sidebar.render() can shrink the rail. When session_state[
+    'sidebar_collapsed'] is True, the sidebar narrows to a thin strip
+    showing only the toggle button (which then reads '▶' to reopen).
+    All other sidebar widgets stay mounted but hidden, so the rest of the
+    app continues to read their session_state values unchanged."""
+    if st.session_state.get("sidebar_collapsed", False):
+        # NOTE: html body … prefix is needed to beat the always-on
+        # [aria-expanded="true"] rule in main.css (which clamps to 21rem).
+        # Streamlit never flips aria-expanded to "false" since we've
+        # hidden its built-in collapse button, so we override using a
+        # higher-specificity selector instead.
+        st.markdown(
+            """
+            <style>
+            html body section[data-testid="stSidebar"][aria-expanded="true"] {
+                min-width: 3.5rem !important;
+                max-width: 3.5rem !important;
+            }
+            html body section[data-testid="stSidebar"]
+                [data-testid="stSidebarUserContent"]
+                [data-testid="stVerticalBlock"] > *:not(:first-child) {
+                display: none !important;
+            }
+            section[data-testid="stSidebar"] > div:first-child {
+                padding: 0.5rem 0.3rem !important;
+            }
+            /* Toggle button shrinks to fit the narrow rail. */
+            section[data-testid="stSidebar"] button[kind="secondary"] {
+                padding: 0.4rem 0 !important;
+                min-height: 2rem !important;
+            }
+            </style>
+            """,
+            unsafe_allow_html=True,
+        )
+
+
 def _baseline_key(
     baseline_overall: int, per_state_baselines: dict[str, int]
 ) -> tuple:
@@ -184,6 +223,7 @@ def _add_v_eff_column(flu, vax_boost_pp, strategy):
 
 def main() -> None:
     _inject_css()
+    _apply_sidebar_collapse_state()
     header.render()
 
     controls = sidebar.render()

@@ -33,14 +33,21 @@ html, body, [class*="css"], .stApp {
 }
 /* Force the open sidebar to honour its expanded geometry. Streamlit's
    emotion class for the collapsed state pins min/max-width to ~0.9px;
-   when the user re-opens the sidebar, Streamlit flips aria-expanded
-   back to "true" and sets an inline width, but does NOT always swap the
-   emotion class. Result: the sidebar reports itself open but renders at
-   ~1px, with no way to expand it again. This override matches the
-   open-state attribute and restores a usable width. */
+   our custom toggle handles collapse via session_state, so when the
+   sidebar is in its expanded state we want the inline 21rem width to
+   render unimpeded by the emotion-class clamp. */
 section[data-testid="stSidebar"][aria-expanded="true"] {
     min-width: 21rem !important;
     max-width: 21rem !important;
+}
+/* Hide Streamlit's built-in sidebar collapse button and the collapsed
+   chevron control. Our custom toggle inside the sidebar (rendered by
+   sidebar.render at the top of the rail) replaces both. The built-in
+   ones trigger Streamlit's broken state machine that leaves the
+   sidebar at ~1px width after re-opening. */
+[data-testid="stSidebarCollapseButton"],
+[data-testid="collapsedControl"] {
+    display: none !important;
 }
 [data-testid="stSidebar"] > div:first-child { padding-top: 1.5rem; }
 [data-testid="stSidebar"] .stMarkdown,
