@@ -538,7 +538,39 @@ def build_synced_grid_animated_choropleth(
 
     if seed_fips:
         # The overlay marks the outbreak origin on every animation frame.
-        fig = _add_seed_overlay(fig, geojson, list(seed_fips))
+        # We can't use the single-trace _add_seed_overlay helper here: this
+        # is a subplot grid, and a Choropleth added without (row, col) lands
+        # on subplot 1 (geo axis "geo", i.e. NY's panel) regardless of which
+        # state the seed actually belongs to. CT and DE counties' lon/lat
+        # falls inside NY's bounding box, so seeds for those states render
+        # as mystery rectangles in the NY panel.
+        #
+        # Fix: split seeds by state and add one transparent overlay trace
+        # per subplot with the correct (row, col), so each seed renders on
+        # its home state's geo axis.
+        seeds_str = [str(f) for f in seed_fips]
+        for i, state in enumerate(state_order):
+            row = (i // n_cols) + 1
+            col = (i % n_cols) + 1
+            state_fips = set(str(f) for f in state_dfs[state]["fips"].unique())
+            local_seeds = [s for s in seeds_str if s in state_fips]
+            if not local_seeds:
+                continue
+            fig.add_trace(
+                go.Choropleth(
+                    geojson=geojson,
+                    locations=local_seeds,
+                    z=[1] * len(local_seeds),
+                    colorscale=[[0, "rgba(0,0,0,0)"], [1, "rgba(0,0,0,0)"]],
+                    showscale=False,
+                    marker_line_color=POSITIVE,
+                    marker_line_width=3.5,
+                    hovertemplate="<b>Outbreak seed</b><br>FIPS %{location}<extra></extra>",
+                    name=f"Seeds {state}",
+                ),
+                row=row,
+                col=col,
+            )
 
     return fig
 
